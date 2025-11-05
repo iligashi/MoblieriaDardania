@@ -3,7 +3,8 @@ import { createClient } from "@/lib/supabase/server"
 import { FurnitureList } from "@/components/admin/furniture-list"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { LogOut, Plus } from "lucide-react"
+import { LogOut, Plus, Sofa } from "lucide-react"
+import { logoutAction } from "./actions"
 
 export default async function AdminDashboardPage() {
   const supabase = await createClient()
@@ -35,14 +36,27 @@ export default async function AdminDashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b bg-card">
+    <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-background">
+      <header className="border-b bg-card/80 backdrop-blur-sm">
         <div className="container mx-auto flex items-center justify-between px-4 py-4">
-          <h1 className="text-2xl font-bold">Admin Dashboard</h1>
+          <div className="flex items-center gap-3">
+            <div className="rounded-lg bg-primary p-2">
+              <Sofa className="h-6 w-6 text-primary-foreground" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-foreground">Mobileria Dardania</h1>
+              <p className="text-xs text-muted-foreground">Admin Dashboard</p>
+            </div>
+          </div>
           <div className="flex items-center gap-4">
             <p className="text-sm text-muted-foreground">{user.email}</p>
-            <form action="/api/auth/logout" method="post">
-              <Button variant="outline" size="sm" type="submit">
+            <form action={logoutAction}>
+              <Button
+                variant="outline"
+                size="sm"
+                type="submit"
+                className="hover:bg-destructive hover:text-destructive-foreground bg-transparent"
+              >
                 <LogOut className="mr-2 h-4 w-4" />
                 Logout
               </Button>
@@ -52,14 +66,20 @@ export default async function AdminDashboardPage() {
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-8 flex items-center justify-between">
           <div>
-            <h2 className="text-3xl font-bold">Furniture Inventory</h2>
-            <p className="text-muted-foreground">Manage your furniture listings</p>
+            <h2 className="text-4xl font-bold text-balance bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              Furniture Inventory
+            </h2>
+            <p className="mt-2 text-muted-foreground">Manage your furniture listings</p>
           </div>
-          <Button asChild>
+          <Button
+            asChild
+            size="lg"
+            className="shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all"
+          >
             <Link href="/admin/furniture/new">
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus className="mr-2 h-5 w-5" />
               Add Furniture
             </Link>
           </Button>
