@@ -100,4 +100,3 @@ export function DashboardStats({ furniture }: DashboardStatsProps) {
     </div>
   )
 }
-

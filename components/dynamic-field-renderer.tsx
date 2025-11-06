@@ -298,4 +298,3 @@ export function CustomFieldsDisplay({ fields, values = {} }: { fields: CustomFie
     </div>
   )
 }
-

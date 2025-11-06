@@ -8,4 +8,3 @@ CREATE INDEX IF NOT EXISTS idx_furniture_custom_fields ON furniture USING GIN (c
 
 -- Add comment to explain the column
 COMMENT ON COLUMN furniture.custom_fields IS 'Array of custom field objects with type, key, label, value, and display order';
-

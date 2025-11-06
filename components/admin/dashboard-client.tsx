@@ -32,4 +32,3 @@ export function DashboardClient({ furniture, categories }: DashboardClientProps)
     </div>
   )
 }
-

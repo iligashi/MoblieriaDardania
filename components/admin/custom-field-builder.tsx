@@ -343,4 +343,3 @@ function SortableFieldItem({
     </div>
   )
 }
-

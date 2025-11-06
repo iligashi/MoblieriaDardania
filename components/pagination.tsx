@@ -147,4 +147,3 @@ export function Pagination({ currentPage, totalPages, totalItems, itemsPerPage }
     </div>
   )
 }
-

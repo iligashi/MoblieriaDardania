@@ -81,4 +81,3 @@ export function EmptyState({ type = "no-results" }: EmptyStateProps) {
     </Card>
   )
 }
-

@@ -177,4 +177,3 @@ export function SettingsManager({ type, label, icon }: SettingsManagerProps) {
     </Card>
   )
 }
-

@@ -101,4 +101,3 @@ export function CategoryBreakdown({ furniture }: CategoryBreakdownProps) {
     </Card>
   )
 }
-
