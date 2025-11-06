@@ -9,9 +9,17 @@ const _geist = Geist({ subsets: ["latin"] })
 const _geistMono = Geist_Mono({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Furniture Store - Quality Furniture for Your Home",
-  description: "Browse and shop quality furniture with advanced filtering options",
-    generator: 'v0.app'
+  title: "Mobileria Dardania",
+  description: "Curated furniture collection - Premium furniture for your home",
+  generator: 'v0.app',
+  icons: {
+    icon: [
+      { url: '/icon.svg', type: 'image/svg+xml' },
+    ],
+    apple: [
+      { url: '/apple-icon.svg', type: 'image/svg+xml' },
+    ],
+  },
 }
 
 export default function RootLayout({

@@ -1,0 +1,40 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background with gradient -->
+  <rect width="64" height="64" rx="14" fill="url(#bgGradient)"/>
+  
+  <!-- Modern Furniture Icon - Sofa/Chair -->
+  <g transform="translate(10, 14)">
+    <!-- Backrest -->
+    <rect x="8" y="0" width="28" height="10" rx="3" fill="white" opacity="0.95"/>
+    
+    <!-- Seat -->
+    <rect x="8" y="10" width="28" height="8" rx="2" fill="white" opacity="0.95"/>
+    
+    <!-- Cushion -->
+    <rect x="10" y="18" width="24" height="5" rx="2" fill="white" opacity="0.9"/>
+    
+    <!-- Legs -->
+    <rect x="10" y="23" width="4" height="5" rx="1" fill="white" opacity="0.8"/>
+    <rect x="30" y="23" width="4" height="5" rx="1" fill="white" opacity="0.8"/>
+    
+    <!-- Decorative accent lines -->
+    <line x1="12" y1="3" x2="32" y2="3" stroke="url(#accentGradient)" stroke-width="1.5" opacity="0.7"/>
+    <line x1="12" y1="13" x2="32" y2="13" stroke="url(#accentGradient)" stroke-width="1.5" opacity="0.7"/>
+  </g>
+  
+  <!-- Brand Initial "M" at bottom -->
+  <text x="32" y="52" font-family="system-ui, -apple-system, sans-serif" font-size="18" font-weight="900" fill="white" text-anchor="middle" opacity="0.95" letter-spacing="-0.5">M</text>
+  
+  <defs>
+    <linearGradient id="bgGradient" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#22c55e"/>
+      <stop offset="50%" stop-color="#16a34a"/>
+      <stop offset="100%" stop-color="#10b981"/>
+    </linearGradient>
+    <linearGradient id="accentGradient" x1="0" y1="0" x2="28" y2="28" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#22c55e"/>
+      <stop offset="100%" stop-color="#10b981"/>
+    </linearGradient>
+  </defs>
+</svg>
+
