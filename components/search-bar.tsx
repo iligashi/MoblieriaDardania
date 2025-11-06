@@ -38,27 +38,33 @@ export function SearchBar() {
   }
 
   return (
-    <form onSubmit={handleSearch} className="flex gap-2">
-      <div className="relative flex-1">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+    <form onSubmit={handleSearch} className="flex gap-4">
+      <div className="relative flex-1 group">
+        <Search className="absolute left-6 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors z-10" />
         <Input
           type="text"
-          placeholder="Search furniture by name or description..."
+          placeholder="Search by name, description, or style..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="pl-10 pr-10"
+          className="pl-14 pr-14 h-14 text-lg shadow-xl border-2 border-border/30 focus:border-primary focus:ring-4 focus:ring-primary/10 bg-white/90 backdrop-blur-sm transition-all rounded-2xl"
         />
         {search && (
           <button
             type="button"
             onClick={clearSearch}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            className="absolute right-6 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors rounded-full p-2 hover:bg-muted/50"
+            aria-label="Clear search"
           >
-            <X className="h-4 w-4" />
+            <X className="h-5 w-5" />
           </button>
         )}
       </div>
-      <Button type="submit">Search</Button>
+      <Button 
+        type="submit" 
+        className="h-14 px-8 bg-gradient-to-r from-primary to-accent hover:from-accent hover:to-primary shadow-2xl shadow-primary/30 hover:shadow-primary/40 transition-all rounded-2xl font-bold text-base"
+      >
+        Search
+      </Button>
     </form>
   )
 }

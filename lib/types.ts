@@ -38,3 +38,44 @@ export interface FurnitureFormData {
   stock: number
   images: string[]
 }
+
+// Custom Fields Types
+export type FieldType = 
+  | 'text' 
+  | 'number' 
+  | 'textarea' 
+  | 'select' 
+  | 'date' 
+  | 'boolean' 
+  | 'url' 
+  | 'email'
+  | 'color'
+  | 'image'
+  | 'rich-text'
+
+export interface CustomField {
+  id: string
+  fieldType: FieldType
+  fieldKey: string
+  fieldLabel: string
+  fieldValue?: string | number | boolean | string[]
+  fieldOptions?: {
+    placeholder?: string
+    options?: string[] // for select fields
+    min?: number
+    max?: number
+    step?: number
+    rows?: number // for textarea
+    validation?: {
+      pattern?: string
+      required?: boolean
+    }
+  }
+  displayOrder: number
+  isRequired: boolean
+  isVisible: boolean
+}
+
+export interface FurnitureWithCustomFields extends Furniture {
+  customFields?: CustomField[]
+}

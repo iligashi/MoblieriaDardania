@@ -7,8 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { X } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
 
 const CATEGORIES = [
   { value: "sofa", label: "Sofa" },
@@ -154,13 +155,36 @@ export function FurnitureFilters() {
     minHeight !== "" ||
     maxHeight !== ""
 
+  const activeFilterCount = useMemo(() => {
+    let count = 0
+    if (category !== "all") count++
+    if (minPrice !== "") count++
+    if (maxPrice !== "") count++
+    if (color !== "all") count++
+    if (material !== "all") count++
+    if (minLength !== "") count++
+    if (maxLength !== "") count++
+    if (minWidth !== "") count++
+    if (maxWidth !== "") count++
+    if (minHeight !== "") count++
+    if (maxHeight !== "") count++
+    return count
+  }, [category, minPrice, maxPrice, color, material, minLength, maxLength, minWidth, maxWidth, minHeight, maxHeight])
+
   return (
-    <Card>
-      <CardHeader>
+    <Card className="border-0 shadow-none bg-transparent">
+      <CardHeader className="pb-4 border-b border-border/30 mb-4">
         <div className="flex items-center justify-between">
-          <CardTitle>Filters</CardTitle>
+          <div className="flex items-center gap-2">
+            <CardTitle className="text-lg font-bold tracking-tight">Filters</CardTitle>
+            {activeFilterCount > 0 && (
+              <Badge className="h-6 min-w-6 flex items-center justify-center px-2 text-xs bg-primary text-primary-foreground shadow-lg font-bold">
+                {activeFilterCount}
+              </Badge>
+            )}
+          </div>
           {hasActiveFilters && (
-            <Button variant="ghost" size="sm" onClick={clearFilters} className="h-auto p-0 text-sm">
+            <Button variant="ghost" size="sm" onClick={clearFilters} className="h-auto p-0 text-xs hover:text-destructive font-medium">
               <X className="mr-1 h-3 w-3" />
               Clear
             </Button>
@@ -309,7 +333,10 @@ export function FurnitureFilters() {
           </div>
         </div>
 
-        <Button onClick={applyFilters} className="w-full">
+        <Button 
+          onClick={applyFilters} 
+          className="w-full bg-gradient-to-r from-primary to-accent hover:from-accent hover:to-primary shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all"
+        >
           Apply Filters
         </Button>
       </CardContent>

@@ -6,7 +6,8 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import Link from "next/link"
-import { ArrowLeft, Package, Ruler, Palette, Weight, Sofa, Sparkles } from "lucide-react"
+import { ArrowLeft, Package, Ruler, Palette, Weight, ShoppingCart, Check, Truck, Shield } from "lucide-react"
+import { CustomFieldsDisplay } from "@/components/dynamic-field-renderer"
 
 export default async function FurnitureDetailPage({
   params,
@@ -22,201 +23,212 @@ export default async function FurnitureDetailPage({
     notFound()
   }
 
+  const mainImage = furniture.images?.[0] || "/placeholder.svg"
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-background">
-      <header className="border-b bg-card/80 backdrop-blur-sm sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+    <div className="min-h-screen bg-background">
+      {/* Minimalist Header */}
+      <header className="fixed top-0 left-0 right-0 z-50 bg-white/40 backdrop-blur-xl border-b border-border/10">
+        <div className="container mx-auto px-6 py-4 flex items-center justify-between">
           <Button variant="ghost" size="sm" asChild className="hover:bg-primary/10">
             <Link href="/">
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Browse
+              Back
             </Link>
           </Button>
-          <Link href="/" className="flex items-center gap-2">
-            <Sofa className="h-5 w-5 text-primary" />
-            <span className="font-bold text-foreground">Mobileria Dardania</span>
+          <Link href="/" className="text-sm font-bold tracking-tight">
+            MOBILERIA DARDANIA
           </Link>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8 lg:py-12">
-        <div className="grid gap-8 lg:grid-cols-2 lg:gap-12">
-          {/* Image Carousel */}
-          <div className="lg:sticky lg:top-24 lg:self-start">
-            <ImageCarousel images={furniture.images} title={furniture.title} />
-          </div>
-
-          {/* Product Details */}
-          <div className="space-y-6">
-            <div className="space-y-4">
-              <div className="flex items-start justify-between gap-4">
-                <h1 className="text-4xl lg:text-5xl font-bold leading-tight text-balance bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
-                  {furniture.title}
-                </h1>
-                <Badge
-                  variant="secondary"
-                  className="capitalize text-sm px-3 py-1 bg-primary/10 text-primary border-primary/20"
-                >
-                  {furniture.category}
-                </Badge>
-              </div>
-              <div className="flex items-baseline gap-2">
-                <p className="text-5xl font-bold text-foreground">${furniture.price.toFixed(2)}</p>
-                <Sparkles className="h-6 w-6 text-primary" />
-              </div>
-            </div>
-
-            <Separator className="bg-gradient-to-r from-transparent via-border to-transparent" />
-
-            <div className="rounded-xl bg-gradient-to-br from-card to-secondary/30 p-6 shadow-sm">
-              <h2 className="mb-3 text-lg font-semibold flex items-center gap-2">
-                <Package className="h-5 w-5 text-primary" />
-                Description
-              </h2>
-              <p className="leading-relaxed text-muted-foreground">{furniture.description}</p>
-            </div>
-
-            <Separator className="bg-gradient-to-r from-transparent via-border to-transparent" />
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Card className="group hover:shadow-lg hover:shadow-primary/10 transition-all border-primary/20 bg-gradient-to-br from-card to-primary/5">
-                <CardContent className="flex items-center gap-4 p-5">
-                  <div className="rounded-xl bg-gradient-to-br from-primary to-accent p-3 shadow-lg group-hover:scale-110 transition-transform">
-                    <Ruler className="h-6 w-6 text-primary-foreground" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Dimensions</p>
-                    <p className="text-base font-semibold text-foreground">
-                      {furniture.dimensions.length} × {furniture.dimensions.width} × {furniture.dimensions.height}{" "}
-                      {furniture.dimensions.unit}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="group hover:shadow-lg hover:shadow-primary/10 transition-all border-primary/20 bg-gradient-to-br from-card to-accent/5">
-                <CardContent className="flex items-center gap-4 p-5">
-                  <div className="rounded-xl bg-gradient-to-br from-accent to-primary p-3 shadow-lg group-hover:scale-110 transition-transform">
-                    <Weight className="h-6 w-6 text-primary-foreground" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Weight</p>
-                    <p className="text-base font-semibold text-foreground">
-                      {furniture.weight} {furniture.weight_unit}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="group hover:shadow-lg hover:shadow-primary/10 transition-all border-primary/20 bg-gradient-to-br from-card to-secondary/50">
-                <CardContent className="flex items-center gap-4 p-5">
-                  <div className="rounded-xl bg-gradient-to-br from-primary to-accent p-3 shadow-lg group-hover:scale-110 transition-transform">
-                    <Palette className="h-6 w-6 text-primary-foreground" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Color</p>
-                    <p className="capitalize text-base font-semibold text-foreground">{furniture.color}</p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="group hover:shadow-lg hover:shadow-primary/10 transition-all border-primary/20 bg-gradient-to-br from-card to-accent/5">
-                <CardContent className="flex items-center gap-4 p-5">
-                  <div className="rounded-xl bg-gradient-to-br from-accent to-primary p-3 shadow-lg group-hover:scale-110 transition-transform">
-                    <Package className="h-6 w-6 text-primary-foreground" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Material</p>
-                    <p className="capitalize text-base font-semibold text-foreground">{furniture.material}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            <Separator className="bg-gradient-to-r from-transparent via-border to-transparent" />
-
-            <div className="space-y-4 rounded-xl bg-gradient-to-br from-card to-secondary/30 p-6 shadow-sm">
-              <div className="flex items-center justify-between">
-                <span className="text-base font-medium">Availability:</span>
-                {furniture.stock > 0 ? (
-                  <Badge className="bg-primary text-primary-foreground shadow-lg shadow-primary/20">
-                    {furniture.stock} in stock
-                  </Badge>
+      <main className="pt-16">
+        {/* Main Product Section - Two Column Layout */}
+        <section className="container mx-auto px-6 py-8 lg:py-12">
+          <div className="max-w-7xl mx-auto">
+            <div className="grid lg:grid-cols-12 gap-8 lg:gap-12">
+              {/* Left Column - Product Image (2/3 width) */}
+              <div className="lg:col-span-8">
+                {furniture.images && furniture.images.length > 0 ? (
+                  <ImageCarousel images={furniture.images} title={furniture.title} />
                 ) : (
-                  <Badge variant="destructive" className="shadow-lg">
-                    Out of stock
-                  </Badge>
+                  <div className="aspect-square rounded-2xl bg-muted/50 overflow-hidden">
+                    <img
+                      src={mainImage}
+                      alt={furniture.title}
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
                 )}
               </div>
 
-              <Button
-                size="lg"
-                className="w-full text-lg shadow-xl shadow-primary/30 hover:shadow-2xl hover:shadow-primary/40 transition-all bg-gradient-to-r from-primary to-accent hover:from-accent hover:to-primary"
-                disabled={furniture.stock === 0}
-              >
-                {furniture.stock > 0 ? "Add to Cart" : "Out of Stock"}
-              </Button>
+              {/* Right Column - Product Info Card (1/3 width) */}
+              <div className="lg:col-span-4">
+                <div className="lg:sticky lg:top-24">
+                  {/* Product Title & Category */}
+                  <div className="mb-6">
+                    <Badge className="mb-3 bg-primary/10 text-primary border-primary/20 capitalize">
+                      {furniture.category}
+                    </Badge>
+                    <h1 className="text-3xl lg:text-4xl font-bold leading-tight mb-4 text-foreground">
+                      {furniture.title}
+                    </h1>
+                  </div>
 
-              <p className="text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
-                <Sparkles className="h-4 w-4 text-primary" />
-                Free shipping on orders over $500
-              </p>
-            </div>
-          </div>
-        </div>
+                  {/* Purchase Card */}
+                  <Card className="border border-border/50 shadow-xl bg-white">
+                    <CardContent className="p-6">
+                      <div className="space-y-6">
+                        {/* Price Display */}
+                        <div className="pb-6 border-b border-border/50">
+                          <p className="text-sm font-medium text-muted-foreground mb-2">Price</p>
+                          <p className="text-4xl font-black text-foreground">
+                            ${furniture.price.toFixed(2)}
+                          </p>
+                        </div>
 
-        <div className="mt-12 lg:mt-16">
-          <Card className="border-primary/20 bg-gradient-to-br from-card via-secondary/20 to-card shadow-xl">
-            <CardContent className="p-8">
-              <h2 className="mb-6 text-2xl font-bold flex items-center gap-2">
-                <Package className="h-6 w-6 text-primary" />
-                Product Specifications
-              </h2>
-              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-muted-foreground">Category</p>
-                  <p className="capitalize text-lg font-semibold">{furniture.category}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-muted-foreground">Material</p>
-                  <p className="capitalize text-lg font-semibold">{furniture.material}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-muted-foreground">Color</p>
-                  <p className="capitalize text-lg font-semibold">{furniture.color}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-muted-foreground">Length</p>
-                  <p className="text-lg font-semibold">
-                    {furniture.dimensions.length} {furniture.dimensions.unit}
-                  </p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-muted-foreground">Width</p>
-                  <p className="text-lg font-semibold">
-                    {furniture.dimensions.width} {furniture.dimensions.unit}
-                  </p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-muted-foreground">Height</p>
-                  <p className="text-lg font-semibold">
-                    {furniture.dimensions.height} {furniture.dimensions.unit}
-                  </p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-muted-foreground">Weight</p>
-                  <p className="text-lg font-semibold">
-                    {furniture.weight} {furniture.weight_unit}
-                  </p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-muted-foreground">Stock</p>
-                  <p className="text-lg font-semibold">{furniture.stock} units</p>
+                        {/* Stock Status */}
+                        <div className="flex items-center justify-between p-4 rounded-xl bg-muted/50">
+                          <span className="text-sm font-medium text-muted-foreground">Availability</span>
+                          {furniture.stock > 0 ? (
+                            <div className="flex items-center gap-2">
+                              <Check className="h-4 w-4 text-green-600" />
+                              <span className="text-sm font-semibold text-green-600">
+                                {furniture.stock} in stock
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-sm font-semibold text-destructive">Out of stock</span>
+                          )}
+                        </div>
+
+                        {/* Add to Cart Button */}
+                        <Button
+                          size="lg"
+                          className="w-full h-12 text-base font-bold bg-gradient-to-r from-primary to-accent hover:from-accent hover:to-primary shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all"
+                          disabled={furniture.stock === 0}
+                        >
+                          <ShoppingCart className="mr-2 h-4 w-4" />
+                          {furniture.stock > 0 ? "Add to Cart" : "Out of Stock"}
+                        </Button>
+
+                        {/* Trust Badges */}
+                        <div className="space-y-3 pt-4 border-t border-border/50">
+                          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                            <Truck className="h-4 w-4 text-primary" />
+                            <span>Free shipping on orders over $500</span>
+                          </div>
+                          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                            <Shield className="h-4 w-4 text-primary" />
+                            <span>Secure checkout & warranty included</span>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Description & Specifications Section */}
+        <section className="container mx-auto px-6 py-12 lg:py-16">
+          <div className="max-w-4xl mx-auto">
+            <div className="space-y-8">
+              {/* Description */}
+              <div>
+                <h2 className="text-2xl font-bold mb-4 tracking-tight">About This Piece</h2>
+                <p className="text-lg leading-relaxed text-muted-foreground">
+                  {furniture.description}
+                </p>
+              </div>
+
+              <Separator />
+
+              {/* Specifications Grid */}
+              <div>
+                <h2 className="text-2xl font-bold mb-6 tracking-tight">Specifications</h2>
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div className="p-6 rounded-2xl border border-border/50 bg-card/50 backdrop-blur-sm">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <Ruler className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Dimensions</p>
+                        <p className="text-lg font-bold text-foreground">
+                          {furniture.dimensions.length} × {furniture.dimensions.width} × {furniture.dimensions.height} {furniture.dimensions.unit}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-6 rounded-2xl border border-border/50 bg-card/50 backdrop-blur-sm">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <Weight className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Weight</p>
+                        <p className="text-lg font-bold text-foreground">
+                          {furniture.weight} {furniture.weight_unit}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-6 rounded-2xl border border-border/50 bg-card/50 backdrop-blur-sm">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <Palette className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Color</p>
+                        <p className="text-lg font-bold text-foreground capitalize">
+                          {furniture.color}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-6 rounded-2xl border border-border/50 bg-card/50 backdrop-blur-sm">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <Package className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Material</p>
+                        <p className="text-lg font-bold text-foreground capitalize">
+                          {furniture.material}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Custom Fields Section */}
+              {((furniture as any)?.customFields || (furniture as any)?.custom_fields) && 
+               Array.isArray((furniture as any).customFields || (furniture as any).custom_fields) && 
+               ((furniture as any).customFields || (furniture as any).custom_fields).length > 0 && (
+                <>
+                  <Separator />
+                  <div>
+                    <h2 className="text-2xl font-bold mb-6 tracking-tight">Additional Details</h2>
+                    <CustomFieldsDisplay 
+                      fields={(furniture as any).customFields || (furniture as any).custom_fields} 
+                      values={((furniture as any).customFields || (furniture as any).custom_fields).reduce((acc: Record<string, any>, field: any) => {
+                        acc[field.fieldKey] = field.fieldValue
+                        return acc
+                      }, {})}
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </section>
       </main>
     </div>
   )

@@ -32,7 +32,15 @@ export async function POST(request: Request) {
 
     const body = await request.json()
 
-    const { data, error } = await supabase.from("furniture").insert([body]).select().single()
+    // Convert customFields to custom_fields for database
+    const payload = {
+      ...body,
+      custom_fields: body.customFields || body.custom_fields || [],
+    }
+    // Remove camelCase version if it exists
+    delete payload.customFields
+
+    const { data, error } = await supabase.from("furniture").insert([payload]).select().single()
 
     if (error) throw error
 

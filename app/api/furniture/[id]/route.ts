@@ -34,7 +34,15 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
     const body = await request.json()
 
-    const { data, error } = await supabase.from("furniture").update(body).eq("id", id).select().single()
+    // Convert customFields to custom_fields for database
+    const payload = {
+      ...body,
+      custom_fields: body.customFields || body.custom_fields || [],
+    }
+    // Remove camelCase version if it exists
+    delete payload.customFields
+
+    const { data, error } = await supabase.from("furniture").update(payload).eq("id", id).select().single()
 
     if (error) throw error
 
