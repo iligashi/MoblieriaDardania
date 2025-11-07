@@ -137,12 +137,12 @@ export default async function HomePage({
         {/* Floating Search Section */}
         <section className="container mx-auto px-6 mb-16">
           <div className="max-w-4xl mx-auto -mt-32 relative z-10">
-            <div className="bg-white/95 backdrop-blur-2xl rounded-3xl shadow-2xl border border-white/20 p-8">
-              <div className="mb-6 text-center">
-                <h2 className="text-5xl font-black tracking-tight mb-3 text-foreground">
+              <div className="bg-white/95 backdrop-blur-2xl rounded-2xl sm:rounded-3xl shadow-2xl border border-white/20 p-4 sm:p-6 md:p-8">
+              <div className="mb-4 sm:mb-6 text-center">
+                <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black tracking-tight mb-2 sm:mb-3 text-foreground">
                   Discover Your Style
                 </h2>
-                <p className="text-lg text-muted-foreground font-light">
+                <p className="text-sm sm:text-base md:text-lg text-muted-foreground font-light">
                   Explore our curated collection of premium furniture pieces
                 </p>
               </div>
@@ -152,26 +152,26 @@ export default async function HomePage({
         </section>
 
         {/* Content Grid - Editorial Layout */}
-        <section className="container mx-auto px-6 pb-20">
-          <div className="grid lg:grid-cols-12 gap-8">
+        <section className="container mx-auto px-4 sm:px-6 pb-12 sm:pb-20">
+          <div className="grid lg:grid-cols-12 gap-4 sm:gap-6 lg:gap-8">
             {/* Filters Sidebar - Compact */}
-            <aside className="lg:col-span-3 lg:sticky lg:top-8 lg:self-start">
-              <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-xl border border-white/20 p-6">
+            <aside className="lg:col-span-3 lg:sticky lg:top-8 lg:self-start order-2 lg:order-1">
+              <div className="bg-white/80 backdrop-blur-xl rounded-xl sm:rounded-2xl shadow-xl border border-white/20 p-4 sm:p-6">
                 <FurnitureFilters />
               </div>
             </aside>
 
             {/* Products Grid - Editorial */}
-            <div className="lg:col-span-9">
+            <div className="lg:col-span-9 order-1 lg:order-2">
               {filteredFurniture && filteredFurniture.length > 0 ? (
                 <>
                   {/* Results Header */}
-                  <div className="mb-8 flex items-center justify-between border-b border-border/50 pb-4">
+                  <div className="mb-6 sm:mb-8 flex items-center justify-between border-b border-border/50 pb-3 sm:pb-4">
                     <div>
-                      <h3 className="text-2xl font-bold text-foreground mb-1">
+                      <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground mb-1">
                         {totalItems} {totalItems === 1 ? "Piece" : "Pieces"} Available
                       </h3>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-xs sm:text-sm text-muted-foreground">
                         Showing {startIndex + 1}-{Math.min(endIndex, totalItems)} of {totalItems}
                       </p>
                     </div>

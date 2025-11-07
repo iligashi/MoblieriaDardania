@@ -79,11 +79,11 @@ export function HeroSlider({ images, autoRotateInterval = 5000 }: HeroSliderProp
               
               {/* Content Overlay */}
               <div className="absolute inset-0 z-20 flex items-center justify-center">
-                <div className="text-center text-white px-4">
-                  <h2 className="text-5xl md:text-7xl font-bold mb-4 drop-shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-1000">
+                <div className="text-center text-white px-4 sm:px-6">
+                  <h2 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-3 sm:mb-4 drop-shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-1000">
                     Mobileria Dardania
                   </h2>
-                  <p className="text-xl md:text-2xl font-light drop-shadow-lg animate-in fade-in slide-in-from-bottom-6 duration-1200 delay-300">
+                  <p className="text-base sm:text-xl md:text-2xl font-light drop-shadow-lg animate-in fade-in slide-in-from-bottom-6 duration-1200 delay-300 px-2">
                     Premium Furniture for Your Home
                   </p>
                 </div>
@@ -99,20 +99,20 @@ export function HeroSlider({ images, autoRotateInterval = 5000 }: HeroSliderProp
           <Button
             variant="ghost"
             size="icon"
-            className="absolute left-4 top-1/2 -translate-y-1/2 z-30 bg-black/30 hover:bg-black/50 text-white backdrop-blur-sm rounded-full h-12 w-12 transition-all hover:scale-110"
+            className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 z-30 bg-black/30 hover:bg-black/50 active:bg-black/60 text-white backdrop-blur-sm rounded-full h-10 w-10 sm:h-12 sm:w-12 transition-all hover:scale-110 touch-manipulation"
             onClick={goToPrevious}
             aria-label="Previous slide"
           >
-            <ChevronLeft className="h-6 w-6" />
+            <ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6" />
           </Button>
           <Button
             variant="ghost"
             size="icon"
-            className="absolute right-4 top-1/2 -translate-y-1/2 z-30 bg-black/30 hover:bg-black/50 text-white backdrop-blur-sm rounded-full h-12 w-12 transition-all hover:scale-110"
+            className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 z-30 bg-black/30 hover:bg-black/50 active:bg-black/60 text-white backdrop-blur-sm rounded-full h-10 w-10 sm:h-12 sm:w-12 transition-all hover:scale-110 touch-manipulation"
             onClick={goToNext}
             aria-label="Next slide"
           >
-            <ChevronRight className="h-6 w-6" />
+            <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6" />
           </Button>
         </>
       )}

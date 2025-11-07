@@ -45,25 +45,25 @@ export default async function AdminDashboardPage() {
     <div className="min-h-screen bg-gradient-to-br from-background via-secondary/10 to-background">
       {/* Modern Header */}
       <header className="sticky top-0 z-50 border-b bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl shadow-sm">
-        <div className="container mx-auto flex items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-4">
-            <div className="rounded-xl bg-gradient-to-br from-primary to-accent p-3 shadow-lg">
-              <Sofa className="h-6 w-6 text-white" />
+        <div className="container mx-auto flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4">
+          <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+            <div className="rounded-lg sm:rounded-xl bg-gradient-to-br from-primary to-accent p-2 sm:p-3 shadow-lg shrink-0">
+              <Sofa className="h-4 w-4 sm:h-6 sm:w-6 text-white" />
             </div>
-            <div>
-              <h1 className="text-xl font-black tracking-tight text-foreground">MOBILERIA DARDANIA</h1>
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Admin Dashboard</p>
+            <div className="min-w-0">
+              <h1 className="text-base sm:text-lg md:text-xl font-black tracking-tight text-foreground truncate">MOBILERIA DARDANIA</h1>
+              <p className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wider hidden sm:block">Admin Dashboard</p>
             </div>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-lg bg-muted/50">
+          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+            <div className="hidden sm:flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg bg-muted/50">
               <Bell className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium text-muted-foreground">{user.email}</span>
+              <span className="text-xs sm:text-sm font-medium text-muted-foreground hidden md:inline">{user.email}</span>
             </div>
-            <Button variant="outline" size="sm" asChild>
+            <Button variant="outline" size="sm" asChild className="h-9 sm:h-10 px-2 sm:px-3">
               <Link href="/admin/settings">
-                <Settings className="mr-2 h-4 w-4" />
-                Settings
+                <Settings className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Settings</span>
               </Link>
             </Button>
             <form action={logoutAction}>
@@ -71,33 +71,33 @@ export default async function AdminDashboardPage() {
                 variant="outline"
                 size="sm"
                 type="submit"
-                className="hover:bg-destructive hover:text-destructive-foreground border-destructive/20"
+                className="h-9 sm:h-10 px-2 sm:px-3 hover:bg-destructive hover:text-destructive-foreground border-destructive/20"
               >
-                <LogOut className="mr-2 h-4 w-4" />
-                Logout
+                <LogOut className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Logout</span>
               </Button>
             </form>
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-6 py-8">
+      <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
         {/* Page Header */}
-        <div className="mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
           <div>
-            <h2 className="text-4xl lg:text-5xl font-black tracking-tight mb-2 bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black tracking-tight mb-1 sm:mb-2 bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
               Dashboard
             </h2>
-            <p className="text-muted-foreground text-lg">Manage your furniture inventory</p>
+            <p className="text-muted-foreground text-sm sm:text-base md:text-lg">Manage your furniture inventory</p>
           </div>
           <Button
             asChild
             size="lg"
-            className="bg-gradient-to-r from-primary to-accent hover:from-accent hover:to-primary shadow-xl shadow-primary/30 hover:shadow-2xl hover:shadow-primary/40 transition-all text-white font-bold"
+            className="bg-gradient-to-r from-primary to-accent hover:from-accent hover:to-primary shadow-xl shadow-primary/30 hover:shadow-2xl hover:shadow-primary/40 transition-all text-white font-bold w-full sm:w-auto touch-manipulation min-h-[44px]"
           >
             <Link href="/admin/furniture/new">
-              <Plus className="mr-2 h-5 w-5" />
-              Add Furniture
+              <Plus className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+              <span className="text-sm sm:text-base">Add Furniture</span>
             </Link>
           </Button>
         </div>

@@ -112,17 +112,18 @@ export function FurnitureList({ furniture, searchQuery = "", categoryFilter = "a
     <>
       <div className="rounded-xl border bg-white dark:bg-gray-900 shadow-lg overflow-hidden">
         <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/50">
-                <TableHead className="w-[100px]">Image</TableHead>
-                <TableHead className="min-w-[200px]">Title</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Price</TableHead>
-                <TableHead>Stock</TableHead>
-                <TableHead className="text-right w-[120px]">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
+          <div className="min-w-[640px]">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/50">
+                  <TableHead className="w-[80px] sm:w-[100px]">Image</TableHead>
+                  <TableHead className="min-w-[150px] sm:min-w-[200px]">Title</TableHead>
+                  <TableHead className="hidden sm:table-cell">Category</TableHead>
+                  <TableHead className="hidden md:table-cell">Price</TableHead>
+                  <TableHead>Stock</TableHead>
+                  <TableHead className="text-right w-[100px] sm:w-[120px]">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
             <TableBody>
               {filteredFurniture.map((item) => (
                 <TableRow key={item.id} className="hover:bg-muted/50 transition-colors">
@@ -143,16 +144,22 @@ export function FurnitureList({ furniture, searchQuery = "", categoryFilter = "a
                   </TableCell>
                   <TableCell>
                     <div>
-                      <div className="font-semibold text-foreground">{item.title}</div>
+                      <div className="font-semibold text-sm sm:text-base text-foreground">{item.title}</div>
                       <div className="text-xs text-muted-foreground line-clamp-1 mt-1">{item.description}</div>
+                      <div className="sm:hidden mt-1 flex items-center gap-2 flex-wrap">
+                        <Badge variant="outline" className="capitalize text-xs">
+                          {item.category}
+                        </Badge>
+                        <span className="text-xs font-semibold text-foreground">${item.price.toFixed(2)}</span>
+                      </div>
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden sm:table-cell">
                     <Badge variant="outline" className="capitalize">
                       {item.category}
                     </Badge>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden md:table-cell">
                     <div className="font-semibold text-foreground">${item.price.toFixed(2)}</div>
                   </TableCell>
                   <TableCell>
@@ -163,7 +170,7 @@ export function FurnitureList({ furniture, searchQuery = "", categoryFilter = "a
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <Button variant="ghost" size="sm" className="h-9 w-9 sm:h-8 sm:w-8 p-0 touch-manipulation min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0">
                           <MoreVertical className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
@@ -194,6 +201,7 @@ export function FurnitureList({ furniture, searchQuery = "", categoryFilter = "a
               ))}
             </TableBody>
           </Table>
+          </div>
         </div>
         {filteredFurniture.length > 0 && (
           <div className="border-t bg-muted/30 px-6 py-4">

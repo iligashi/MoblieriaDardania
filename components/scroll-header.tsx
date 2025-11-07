@@ -24,12 +24,12 @@ export function ScrollHeader() {
           : "pointer-events-none"
       )}
     >
-      <div className="container mx-auto px-6 py-6">
+      <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-6">
         <div className="flex items-center justify-between pointer-events-auto">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
             <div
               className={cn(
-                "h-12 w-12 rounded-2xl flex items-center justify-center border transition-all duration-300 shadow-2xl",
+                "h-10 w-10 sm:h-12 sm:w-12 rounded-xl sm:rounded-2xl flex items-center justify-center border transition-all duration-300 shadow-2xl touch-manipulation",
                 isScrolled
                   ? "bg-primary/10 backdrop-blur-sm border-primary/20"
                   : "bg-white/90 backdrop-blur-xl border-white/20"
@@ -37,7 +37,7 @@ export function ScrollHeader() {
             >
               <svg
                 className={cn(
-                  "h-6 w-6 transition-colors duration-300",
+                  "h-5 w-5 sm:h-6 sm:w-6 transition-colors duration-300",
                   isScrolled ? "text-primary" : "text-primary"
                 )}
                 fill="none"
@@ -55,7 +55,7 @@ export function ScrollHeader() {
             <div>
               <h1
                 className={cn(
-                  "text-xl font-black tracking-tight transition-colors duration-300",
+                  "text-base sm:text-lg md:text-xl font-black tracking-tight transition-colors duration-300",
                   isScrolled
                     ? "text-foreground drop-shadow-none"
                     : "text-white drop-shadow-2xl"
@@ -65,7 +65,7 @@ export function ScrollHeader() {
               </h1>
               <p
                 className={cn(
-                  "text-xs font-medium transition-colors duration-300",
+                  "text-[10px] sm:text-xs font-medium transition-colors duration-300 hidden sm:block",
                   isScrolled
                     ? "text-muted-foreground"
                     : "text-white/80"

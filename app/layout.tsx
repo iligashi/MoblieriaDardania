@@ -12,6 +12,12 @@ export const metadata: Metadata = {
   title: "Mobileria Dardania",
   description: "Curated furniture collection - Premium furniture for your home",
   generator: 'v0.app',
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 5,
+    userScalable: true,
+  },
   icons: {
     icon: [
       { url: '/icon.svg', type: 'image/svg+xml' },

@@ -45,10 +45,11 @@ export function ImageCarousel({ images, title }: ImageCarouselProps) {
             <Button
               variant="secondary"
               size="icon"
-              className="absolute right-4 top-4 bg-background/90 backdrop-blur-sm opacity-0 transition-opacity group-hover:opacity-100 shadow-lg"
+              className="absolute right-2 sm:right-4 top-2 sm:top-4 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shadow-lg touch-manipulation min-h-[44px] min-w-[44px] z-30 border border-border/50"
               onClick={() => setIsLightboxOpen(true)}
+              aria-label="Zoom image"
             >
-              <ZoomIn className="h-5 w-5" />
+              <ZoomIn className="h-4 w-4 sm:h-5 sm:w-5" />
             </Button>
 
             {/* Navigation Arrows */}
@@ -57,18 +58,20 @@ export function ImageCarousel({ images, title }: ImageCarouselProps) {
                 <Button
                   variant="secondary"
                   size="icon"
-                  className="absolute left-4 top-1/2 -translate-y-1/2 bg-background/90 backdrop-blur-sm shadow-lg hover:bg-primary hover:text-primary-foreground transition-all"
+                  className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 bg-background/90 backdrop-blur-sm shadow-lg hover:bg-primary hover:text-primary-foreground active:bg-primary active:text-primary-foreground transition-all touch-manipulation min-h-[44px] min-w-[44px] z-20"
                   onClick={goToPrevious}
+                  aria-label="Previous image"
                 >
-                  <ChevronLeft className="h-5 w-5" />
+                  <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5" />
                 </Button>
                 <Button
                   variant="secondary"
                   size="icon"
-                  className="absolute right-4 top-1/2 -translate-y-1/2 bg-background/90 backdrop-blur-sm shadow-lg hover:bg-primary hover:text-primary-foreground transition-all"
+                  className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 bg-background/90 backdrop-blur-sm shadow-lg hover:bg-primary hover:text-primary-foreground active:bg-primary active:text-primary-foreground transition-all touch-manipulation min-h-[44px] min-w-[44px] z-20"
                   onClick={goToNext}
+                  aria-label="Next image"
                 >
-                  <ChevronRight className="h-5 w-5" />
+                  <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5" />
                 </Button>
               </>
             )}
@@ -84,16 +87,16 @@ export function ImageCarousel({ images, title }: ImageCarouselProps) {
 
         {/* Thumbnail Navigation */}
         {displayImages.length > 1 && (
-          <div className="grid grid-cols-4 gap-3 sm:grid-cols-5 lg:grid-cols-4">
+          <div className="grid grid-cols-4 gap-2 sm:gap-3 sm:grid-cols-5 lg:grid-cols-4">
             {displayImages.map((image, index) => (
               <button
                 key={index}
                 onClick={() => goToImage(index)}
                 className={cn(
-                  "relative aspect-square overflow-hidden rounded-xl border-2 transition-all hover:scale-105",
+                  "relative aspect-square overflow-hidden rounded-lg sm:rounded-xl border-2 transition-all hover:scale-105 active:scale-105 touch-manipulation min-h-[44px]",
                   currentIndex === index
                     ? "border-primary shadow-lg shadow-primary/20 ring-2 ring-primary/20"
-                    : "border-border hover:border-primary/50",
+                    : "border-border hover:border-primary/50 active:border-primary/50",
                 )}
               >
                 <img
