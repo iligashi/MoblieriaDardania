@@ -55,4 +55,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unexpected error creating order request." }, { status: 500 })
   }
 }
-

@@ -40,4 +40,3 @@ export async function sendOrderEmail({
 
   await emailjs.send(serviceId, templateId, templateParams, { publicKey })
 }
-

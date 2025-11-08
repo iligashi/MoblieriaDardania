@@ -47,4 +47,3 @@ CREATE POLICY "Admins can update orders" ON orders
       SELECT 1 FROM admin_users WHERE id = auth.uid()
     )
   );
-

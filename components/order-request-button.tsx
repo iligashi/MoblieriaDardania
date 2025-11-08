@@ -311,4 +311,3 @@ export function OrderRequestButton({ furniture }: OrderRequestButtonProps) {
     </Dialog>
   )
 }
-

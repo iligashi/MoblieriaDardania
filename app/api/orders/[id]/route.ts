@@ -42,4 +42,3 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     return NextResponse.json({ error: "Unexpected error updating order." }, { status: 500 })
   }
 }
-
