@@ -6,8 +6,9 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import Link from "next/link"
-import { ArrowLeft, Package, Ruler, Palette, Weight, ShoppingCart, Check, Truck, Shield } from "lucide-react"
+import { ArrowLeft, Package, Ruler, Palette, Weight, Check, Truck, Shield } from "lucide-react"
 import { CustomFieldsDisplay } from "@/components/dynamic-field-renderer"
+import { OrderRequestButton } from "@/components/order-request-button"
 
 export default async function FurnitureDetailPage({
   params,
@@ -103,14 +104,16 @@ export default async function FurnitureDetailPage({
                         </div>
 
                         {/* Add to Cart Button */}
-                        <Button
-                          size="lg"
-                          className="w-full h-11 sm:h-12 text-sm sm:text-base font-bold bg-gradient-to-r from-primary to-accent hover:from-accent hover:to-primary active:from-accent active:to-primary shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all touch-manipulation min-h-[44px]"
-                          disabled={furniture.stock === 0}
-                        >
-                          <ShoppingCart className="mr-2 h-4 w-4" />
-                          {furniture.stock > 0 ? "Add to Cart" : "Out of Stock"}
-                        </Button>
+                        <OrderRequestButton
+                          furniture={{
+                            id: furniture.id,
+                            title: furniture.title,
+                            price: Number(furniture.price),
+                            stock: furniture.stock,
+                            category: furniture.category,
+                            images: furniture.images,
+                          }}
+                        />
 
                         {/* Trust Badges */}
                         <div className="space-y-3 pt-4 border-t border-border/50">

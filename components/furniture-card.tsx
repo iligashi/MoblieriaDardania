@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import type { Furniture } from "@/lib/types"
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -17,8 +17,27 @@ export function FurnitureCard({ furniture, featured = false }: FurnitureCardProp
   const [imageError, setImageError] = useState(false)
   const [imageLoading, setImageLoading] = useState(true)
 
+  const imgRef = useRef<HTMLImageElement>(null)
+
   const imageUrl = furniture.images?.[0] || "/placeholder.svg"
   const placeholderUrl = "/placeholder.svg"
+
+  useEffect(() => {
+    setImageError(false)
+    setImageLoading(true)
+
+    const img = imgRef.current
+    if (!img) {
+      return
+    }
+
+    if (img.complete) {
+      if (img.naturalWidth === 0) {
+        setImageError(true)
+      }
+      setImageLoading(false)
+    }
+  }, [imageUrl])
 
   if (featured) {
     return (
@@ -29,6 +48,7 @@ export function FurnitureCard({ furniture, featured = false }: FurnitureCardProp
               <div className="absolute inset-0 animate-pulse bg-muted" />
             )}
             <img
+              ref={imgRef}
               src={imageError ? placeholderUrl : imageUrl}
               alt={furniture.title}
               className={cn(
@@ -98,6 +118,7 @@ export function FurnitureCard({ furniture, featured = false }: FurnitureCardProp
             <div className="absolute inset-0 animate-pulse bg-muted" />
           )}
           <img
+            ref={imgRef}
             src={imageError ? placeholderUrl : imageUrl}
             alt={furniture.title}
             className={cn(

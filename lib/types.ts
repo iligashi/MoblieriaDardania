@@ -79,3 +79,18 @@ export interface CustomField {
 export interface FurnitureWithCustomFields extends Furniture {
   customFields?: CustomField[]
 }
+
+export interface Order {
+  id: string
+  furniture_id: string
+  furniture_title: string
+  furniture_price: number
+  customer_name: string
+  customer_email: string | null
+  customer_phone: string | null
+  customer_message: string | null
+  send_via_email: boolean
+  send_via_whatsapp: boolean
+  status: "pending" | "in_progress" | "completed"
+  created_at: string
+}

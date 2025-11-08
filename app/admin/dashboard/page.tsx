@@ -9,6 +9,7 @@ import Link from "next/link"
 import { LogOut, Plus, Sofa, Bell, Settings } from "lucide-react"
 import { logoutAction } from "./actions"
 import { DashboardClient } from "@/components/admin/dashboard-client"
+import { OrderRequests } from "@/components/admin/order-requests"
 
 export default async function AdminDashboardPage() {
   const supabase = await createClient()
@@ -37,6 +38,15 @@ export default async function AdminDashboardPage() {
 
   if (furnitureError) {
     console.error("[v0] Error fetching furniture:", furnitureError)
+  }
+
+  const { data: orders, error: ordersError } = await supabase
+    .from("orders")
+    .select("*")
+    .order("created_at", { ascending: false })
+
+  if (ordersError) {
+    console.error("[v0] Error fetching orders:", ordersError)
   }
 
   const categories = Array.from(new Set((furniture || []).map((item) => item.category)))
@@ -117,6 +127,10 @@ export default async function AdminDashboardPage() {
           <div className="bg-white dark:bg-gray-900 rounded-xl border shadow-lg p-6">
             <h3 className="text-xl font-bold mb-4">Inventory Management</h3>
             <DashboardClient furniture={furniture || []} categories={categories} />
+          </div>
+          <div className="bg-white dark:bg-gray-900 rounded-xl border shadow-lg p-6">
+            <h3 className="text-xl font-bold mb-4">Order Requests</h3>
+            <OrderRequests orders={orders || []} />
           </div>
         </div>
       </main>
