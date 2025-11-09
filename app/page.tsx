@@ -1,7 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import { FurnitureGrid } from "@/components/furniture-grid"
 import { FurnitureFilters } from "@/components/furniture-filters"
-import { SearchBar } from "@/components/search-bar"
 import { HeroSlider } from "@/components/hero-slider"
 import { EmptyState } from "@/components/empty-state"
 import { Pagination } from "@/components/pagination"
@@ -133,23 +132,7 @@ export default async function HomePage({
       <ScrollHeader />
 
       {/* Main Content - Editorial Style */}
-      <main className="relative -mt-20">
-        {/* Floating Search Section */}
-        <section className="container mx-auto px-6 mb-16">
-          <div className="max-w-4xl mx-auto -mt-32 relative z-10">
-              <div className="bg-white/95 backdrop-blur-2xl rounded-2xl sm:rounded-3xl shadow-2xl border border-white/20 p-4 sm:p-6 md:p-8">
-              <div className="mb-4 sm:mb-6 text-center">
-                <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black tracking-tight mb-2 sm:mb-3 text-foreground">
-                  Discover Your Style
-                </h2>
-                <p className="text-sm sm:text-base md:text-lg text-muted-foreground font-light">
-                  Explore our curated collection of premium furniture pieces
-                </p>
-              </div>
-              <SearchBar />
-            </div>
-          </div>
-        </section>
+      <main className="relative">
 
         {/* Content Grid - Editorial Layout */}
         <section className="container mx-auto px-4 sm:px-6 pb-12 sm:pb-20">

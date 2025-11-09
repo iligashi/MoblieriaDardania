@@ -2,9 +2,14 @@
 
 import { useState, useEffect } from "react"
 import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Search as SearchIcon } from "lucide-react"
+import { SearchBar } from "@/components/search-bar"
 
 export function ScrollHeader() {
   const [isScrolled, setIsScrolled] = useState(false)
+  const [isSearchOpen, setIsSearchOpen] = useState(false)
 
   useEffect(() => {
     const handleScroll = () => {
@@ -19,13 +24,11 @@ export function ScrollHeader() {
     <header
       className={cn(
         "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
-        isScrolled
-          ? "bg-white/40 backdrop-blur-xl shadow-lg border-b border-border/5"
-          : "pointer-events-none"
+        isScrolled ? "bg-white/70 backdrop-blur-xl shadow-lg border-b border-border/5" : "bg-transparent"
       )}
     >
       <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-6">
-        <div className="flex items-center justify-between pointer-events-auto">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 sm:gap-4">
             <div
               className={cn(
@@ -75,6 +78,42 @@ export function ScrollHeader() {
               </p>
             </div>
           </div>
+
+          <Dialog open={isSearchOpen} onOpenChange={setIsSearchOpen}>
+            <DialogTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  "h-10 w-10 sm:h-11 sm:w-11 rounded-full border transition-all duration-300",
+                  isScrolled
+                    ? "border-border bg-white/80 hover:bg-white"
+                    : "border-white/30 bg-white/20 hover:bg-white/30 backdrop-blur"
+                )}
+                aria-label="Search furniture"
+              >
+                <SearchIcon
+                  className={cn(
+                    "h-4 w-4 sm:h-5 sm:w-5 transition-colors",
+                    isScrolled ? "text-foreground" : "text-white"
+                  )}
+                />
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="w-[min(92vw,36rem)] sm:max-w-2xl border border-border/40 bg-background/95 backdrop-blur-xl p-0 overflow-hidden">
+              <div className="flex flex-col gap-4 p-5 sm:p-6">
+                <DialogHeader className="space-y-1 text-left">
+                  <DialogTitle className="text-xl sm:text-2xl font-semibold text-foreground">
+                    Search the collection
+                  </DialogTitle>
+                  <p className="text-xs sm:text-sm text-muted-foreground">
+                    Find furniture by name, description, material, or style.
+                  </p>
+                </DialogHeader>
+                <SearchBar />
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
     </header>
