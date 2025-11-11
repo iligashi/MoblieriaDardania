@@ -37,8 +37,13 @@ export default async function FurnitureDetailPage({
               <span className="hidden sm:inline">Back</span>
             </Link>
           </Button>
-          <Link href="/" className="text-xs sm:text-sm font-bold tracking-tight">
-            FLUX DEKOR
+          <Link href="/" className="flex items-center gap-2 text-xs sm:text-sm font-bold tracking-tight">
+            <img
+              src="/flux-removebg-preview.png"
+              alt="Flux Dekor logo"
+              className="h-6 w-6 sm:h-7 sm:w-7 rounded bg-white object-contain"
+            />
+            <span>FLUX DEKOR</span>
           </Link>
         </div>
       </header>

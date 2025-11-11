@@ -8,7 +8,11 @@ import { Button } from "@/components/ui/button"
 import { Search, X } from "lucide-react"
 import { useState, useEffect } from "react"
 
-export function SearchBar() {
+interface SearchBarProps {
+  onSubmitSuccess?: () => void
+}
+
+export function SearchBar({ onSubmitSuccess }: SearchBarProps = {}) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [search, setSearch] = useState(searchParams.get("search") || "")
@@ -28,6 +32,7 @@ export function SearchBar() {
     }
 
     router.push(`/?${params.toString()}`)
+    onSubmitSuccess?.()
   }
 
   const clearSearch = () => {

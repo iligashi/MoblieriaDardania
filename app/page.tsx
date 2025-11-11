@@ -6,6 +6,8 @@ import { EmptyState } from "@/components/empty-state"
 import { Pagination } from "@/components/pagination"
 import { ScrollHeader } from "@/components/scroll-header"
 import { Suspense } from "react"
+import Link from "next/link"
+import { Instagram, MessageCircle } from "lucide-react"
 import { FurnitureGridSkeleton } from "@/components/furniture-grid-skeleton"
 
 const ITEMS_PER_PAGE = 12
@@ -198,8 +200,28 @@ export default async function HomePage({
         <div className="container mx-auto px-6 py-12">
           <div className="flex flex-col items-center justify-center gap-4">
             <div className="h-px w-24 bg-gradient-to-r from-transparent via-primary to-transparent" />
+            <div className="flex items-center gap-6">
+              <Link
+                href="https://www.instagram.com/dardaniamobileri?igsh=MWhzY2tpYmhqZWY2NA=="
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-primary"
+              >
+                <Instagram className="h-5 w-5" />
+                <span>@dardaniamobileri</span>
+              </Link>
+              <Link
+                href="https://wa.me/38349514788"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-primary"
+              >
+                <MessageCircle className="h-5 w-5" />
+                <span>+383 49 514 788</span>
+              </Link>
+            </div>
             <p className="text-sm text-muted-foreground font-light tracking-wide">
-              © 2025 MOBILERIA DARDANIA
+              © 2025 FLUX
             </p>
             <p className="text-xs text-muted-foreground/60 uppercase tracking-widest">
               Premium Furniture Collection

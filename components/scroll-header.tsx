@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import Image from "next/image"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
@@ -32,28 +33,20 @@ export function ScrollHeader() {
           <div className="flex items-center gap-2 sm:gap-4">
             <div
               className={cn(
-                "h-10 w-10 sm:h-12 sm:w-12 rounded-xl sm:rounded-2xl flex items-center justify-center border transition-all duration-300 shadow-2xl touch-manipulation",
+                "h-10 w-10 sm:h-12 sm:w-12 rounded-xl sm:rounded-2xl flex items-center justify-center border transition-all duration-300 shadow-2xl touch-manipulation overflow-hidden",
                 isScrolled
                   ? "bg-primary/10 backdrop-blur-sm border-primary/20"
                   : "bg-white/90 backdrop-blur-xl border-white/20"
               )}
             >
-              <svg
-                className={cn(
-                  "h-5 w-5 sm:h-6 sm:w-6 transition-colors duration-300",
-                  isScrolled ? "text-primary" : "text-primary"
-                )}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
-                />
-              </svg>
+              <Image
+                src="/flux-removebg-preview.png"
+                alt="Flux Dekor logo"
+                width={48}
+                height={48}
+                priority
+                className="h-full w-full object-contain p-1"
+              />
             </div>
             <div>
               <h1
@@ -64,7 +57,7 @@ export function ScrollHeader() {
                     : "text-white drop-shadow-2xl"
                 )}
               >
-                FLUX DEKOR
+                FLUX
               </h1>
               <p
                 className={cn(
@@ -110,7 +103,7 @@ export function ScrollHeader() {
                     Find furniture by name, description, material, or style.
                   </p>
                 </DialogHeader>
-                <SearchBar />
+                <SearchBar onSubmitSuccess={() => setIsSearchOpen(false)} />
               </div>
             </DialogContent>
           </Dialog>
