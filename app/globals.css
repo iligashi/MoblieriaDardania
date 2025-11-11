@@ -4,7 +4,7 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Modern color scheme for Mobileria Dardania - Clean white with vibrant green accents */
+  /* Modern color scheme for Flux Dekor - Clean white with vibrant green accents */
   --background: oklch(1 0 0);
   --foreground: oklch(0.15 0.01 160);
   --card: oklch(1 0 0);

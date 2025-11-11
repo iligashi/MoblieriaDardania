@@ -38,7 +38,7 @@ export default async function FurnitureDetailPage({
             </Link>
           </Button>
           <Link href="/" className="text-xs sm:text-sm font-bold tracking-tight">
-            MOBILERIA DARDANIA
+            FLUX DEKOR
           </Link>
         </div>
       </header>

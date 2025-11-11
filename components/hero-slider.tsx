@@ -81,7 +81,7 @@ export function HeroSlider({ images, autoRotateInterval = 5000 }: HeroSliderProp
               <div className="absolute inset-0 z-20 flex items-center justify-center">
                 <div className="text-center text-white px-4 sm:px-6">
                   <h2 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-3 sm:mb-4 drop-shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-1000">
-                    Mobileria Dardania
+                    Flux Dekor
                   </h2>
                   <p className="text-base sm:text-xl md:text-2xl font-light drop-shadow-lg animate-in fade-in slide-in-from-bottom-6 duration-1200 delay-300 px-2">
                     Premium Furniture for Your Home

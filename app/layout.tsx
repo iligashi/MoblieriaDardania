@@ -9,7 +9,7 @@ const _geist = Geist({ subsets: ["latin"] })
 const _geistMono = Geist_Mono({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Mobileria Dardania",
+  title: "Flux Dekor",
   description: "Curated furniture collection - Premium furniture for your home",
   generator: 'v0.app',
   viewport: {

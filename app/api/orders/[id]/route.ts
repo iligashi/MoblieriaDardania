@@ -24,6 +24,17 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       return NextResponse.json({ error: "Invalid status value." }, { status: 400 })
     }
 
+    const { data: existingOrder, error: fetchError } = await supabase
+      .from("orders")
+      .select("id, status, furniture_id")
+      .eq("id", id)
+      .single()
+
+    if (fetchError) {
+      console.error("[orders] Failed to load order:", fetchError)
+      return NextResponse.json({ error: "Order not found." }, { status: 404 })
+    }
+
     const { data, error } = await supabase
       .from("orders")
       .update({ status })
@@ -34,6 +45,29 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     if (error) {
       console.error("[orders] Failed to update status:", error)
       return NextResponse.json({ error: "Failed to update order status." }, { status: 500 })
+    }
+
+    if (status === "completed" && existingOrder.status !== "completed") {
+      const { data: furniture, error: furnitureError } = await supabase
+        .from("furniture")
+        .select("stock")
+        .eq("id", existingOrder.furniture_id)
+        .single()
+
+      if (furnitureError) {
+        console.error("[orders] Failed to fetch furniture stock:", furnitureError)
+      } else if (typeof furniture?.stock === "number") {
+        const updatedStock = Math.max(furniture.stock - 1, 0)
+
+        const { error: stockUpdateError } = await supabase
+          .from("furniture")
+          .update({ stock: updatedStock })
+          .eq("id", existingOrder.furniture_id)
+
+        if (stockUpdateError) {
+          console.error("[orders] Failed to decrement furniture stock:", stockUpdateError)
+        }
+      }
     }
 
     return NextResponse.json({ order: data })

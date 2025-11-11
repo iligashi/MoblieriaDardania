@@ -64,7 +64,7 @@ export function ScrollHeader() {
                     : "text-white drop-shadow-2xl"
                 )}
               >
-                MOBILERIA DARDANIA
+                FLUX DEKOR
               </h1>
               <p
                 className={cn(
