@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import type { Furniture, CustomField } from "@/lib/types"
 import { CustomFieldBuilder } from "@/components/admin/custom-field-builder"
 import { DynamicFieldRenderer } from "@/components/dynamic-field-renderer"
-import { X, Plus } from "lucide-react"
+import { X, Plus, UploadCloud, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 
 interface FurnitureFormProps {
@@ -57,6 +57,8 @@ export function FurnitureForm({ furniture }: FurnitureFormProps) {
   })
 
   const [imageInput, setImageInput] = useState("")
+  const [isUploading, setIsUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
   const [customFields, setCustomFields] = useState<CustomField[]>(
     (furniture as any)?.customFields || []
   )
@@ -204,19 +206,67 @@ export function FurnitureForm({ furniture }: FurnitureFormProps) {
 
   const addImage = () => {
     if (imageInput.trim()) {
-      setFormData({
-        ...formData,
-        images: [...formData.images, imageInput.trim()],
-      })
+      const url = imageInput.trim()
+      setFormData((prev) => ({
+        ...prev,
+        images: [...prev.images, url],
+      }))
       setImageInput("")
     }
   }
 
   const removeImage = (index: number) => {
-    setFormData({
-      ...formData,
-      images: formData.images.filter((_, i) => i !== index),
-    })
+    setFormData((prev) => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index),
+    }))
+  }
+
+  const handleUploadClick = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) {
+      return
+    }
+
+    setIsUploading(true)
+    try {
+      const uploadFormData = new FormData()
+      uploadFormData.append("file", file)
+      uploadFormData.append("fileName", file.name.replace(/\.[^/.]+$/, ""))
+
+      const response = await fetch("/api/uploads", {
+        method: "POST",
+        body: uploadFormData,
+      })
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => null)
+        throw new Error(data?.error || "Image upload failed.")
+      }
+
+      const data = await response.json()
+      if (data?.url) {
+        setFormData((prev) => ({
+          ...prev,
+          images: [...prev.images, data.url as string],
+        }))
+        toast.success("Image uploaded successfully.")
+      } else {
+        throw new Error("Upload did not return a URL.")
+      }
+    } catch (error) {
+      console.error("[upload] Error uploading image:", error)
+      toast.error(error instanceof Error ? error.message : "Unable to upload image.")
+    } finally {
+      setIsUploading(false)
+      if (event.target) {
+        event.target.value = ""
+      }
+    }
   }
 
   return (
@@ -500,7 +550,7 @@ export function FurnitureForm({ furniture }: FurnitureFormProps) {
 
             <div className="grid gap-2">
               <Label>Images</Label>
-              <div className="flex gap-2">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                 <Input
                   placeholder="Enter image URL"
                   value={imageInput}
@@ -512,20 +562,44 @@ export function FurnitureForm({ furniture }: FurnitureFormProps) {
                     }
                   }}
                 />
-                <Button type="button" onClick={addImage}>
-                  Add
-                </Button>
+                <div className="flex flex-col gap-2 sm:flex-row sm:w-auto">
+                  <Button type="button" onClick={addImage}>
+                    Add
+                  </Button>
+                  <Button type="button" variant="outline" onClick={handleUploadClick} disabled={isUploading}>
+                    {isUploading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <UploadCloud className="mr-2 h-4 w-4" />
+                        Upload Image
+                      </>
+                    )}
+                  </Button>
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleFileChange}
+                />
               </div>
               {formData.images.length > 0 && (
                 <div className="mt-2 grid gap-2">
                   {formData.images.map((img, index) => (
-                    <div key={index} className="flex items-center gap-2 rounded border bg-muted p-2">
-                      <img
-                        src={img || "/placeholder.svg"}
-                        alt={`Preview ${index + 1}`}
-                        className="h-12 w-12 rounded object-cover"
-                      />
-                      <span className="flex-1 truncate text-sm">{img}</span>
+                    <div key={index} className="flex items-center gap-2 rounded border bg-muted/60 p-2">
+                      <div className="h-12 w-12 shrink-0 overflow-hidden rounded bg-white">
+                        <img
+                          src={img || "/placeholder.svg"}
+                          alt={`Preview ${index + 1}`}
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                      <span className="flex-1 min-w-0 break-all text-sm text-muted-foreground">{img}</span>
                       <Button type="button" variant="ghost" size="sm" onClick={() => removeImage(index)}>
                         <X className="h-4 w-4" />
                       </Button>
