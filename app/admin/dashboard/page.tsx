@@ -6,8 +6,7 @@ import { DashboardFilters } from "@/components/admin/dashboard-filters"
 import { CategoryBreakdown } from "@/components/admin/category-breakdown"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { LogOut, Plus, Bell, Settings } from "lucide-react"
-import Image from "next/image"
+import { LogOut, Plus, Sofa, Bell, Settings } from "lucide-react"
 import { logoutAction } from "./actions"
 import { DashboardClient } from "@/components/admin/dashboard-client"
 import { OrderRequests } from "@/components/admin/order-requests"
@@ -58,18 +57,11 @@ export default async function AdminDashboardPage() {
       <header className="sticky top-0 z-50 border-b bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl shadow-sm">
         <div className="container mx-auto flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4">
           <div className="flex items-center gap-2 sm:gap-4 min-w-0">
-            <div className="rounded-lg sm:rounded-xl bg-white p-1.5 sm:p-2 shadow-lg shrink-0 border border-border/50">
-              <Image
-                src="/flux-removebg-preview.png"
-                alt="Flux logo"
-                width={40}
-                height={40}
-                className="h-8 w-8 sm:h-10 sm:w-10 object-contain"
-                priority
-              />
+            <div className="rounded-lg sm:rounded-xl bg-gradient-to-br from-primary to-accent p-2 sm:p-3 shadow-lg shrink-0">
+              <Sofa className="h-4 w-4 sm:h-6 sm:w-6 text-white" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-base sm:text-lg md:text-xl font-black tracking-tight text-foreground truncate">FLUX</h1>
+              <h1 className="text-base sm:text-lg md:text-xl font-black tracking-tight text-foreground truncate">MOBILERIA DARDANIA</h1>
               <p className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wider hidden sm:block">Admin Dashboard</p>
             </div>
           </div>
