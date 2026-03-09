@@ -80,3 +80,30 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     return NextResponse.json({ error: "Unexpected error updating order." }, { status: 500 })
   }
 }
+
+export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await params
+    const supabase = await createClient()
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const { data: adminCheck } = await supabase.from("admin_users").select("id").eq("id", user.id).single()
+    if (!adminCheck) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
+    }
+
+    // Delete order items first, then order
+    await supabase.from("order_items").delete().eq("order_id", id)
+    const { error } = await supabase.from("orders").delete().eq("id", id)
+
+    if (error) throw error
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error("Error deleting order:", error)
+    return NextResponse.json({ error: "Failed to delete order" }, { status: 500 })
+  }
+}
