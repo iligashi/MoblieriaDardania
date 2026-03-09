@@ -111,26 +111,26 @@ export default async function HomePage() {
             </Link>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-            {categories.map((cat) => (
-              <Link
-                key={cat.id}
-                href={`/shop?category=${cat.slug}`}
-                className="group relative h-32 sm:h-40 rounded-xl overflow-hidden bg-[#f8f9fa] border border-border/50 hover:border-primary/30 hover:shadow-lg transition-all"
-              >
-                {cat.image && (
-                  <img
-                    src={cat.image}
-                    alt={cat.name}
-                    className="absolute inset-0 h-full w-full object-cover opacity-20 group-hover:opacity-30 transition-opacity"
-                  />
-                )}
-                <div className="relative h-full flex items-end p-4">
-                  <span className="text-sm sm:text-base font-bold text-foreground group-hover:text-primary transition-colors">
-                    {cat.name}
-                  </span>
-                </div>
-              </Link>
-            ))}
+            {categories.map((cat) => {
+              const hasColor = cat.image && cat.image.startsWith("#")
+              return (
+                <Link
+                  key={cat.id}
+                  href={`/shop?category=${cat.slug}`}
+                  className="group relative h-32 sm:h-40 rounded-xl overflow-hidden border border-border/50 hover:shadow-lg transition-all"
+                  style={hasColor ? { backgroundColor: cat.image! } : { backgroundColor: "#f8f9fa" }}
+                >
+                  {hasColor && (
+                    <div className="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-colors" />
+                  )}
+                  <div className="relative h-full flex items-end p-4">
+                    <span className={`text-sm sm:text-base font-bold ${hasColor ? "text-white drop-shadow-sm" : "text-foreground group-hover:text-primary transition-colors"}`}>
+                      {cat.name}
+                    </span>
+                  </div>
+                </Link>
+              )
+            })}
           </div>
         </section>
       )}

@@ -5,7 +5,8 @@
       "Bash(mkdir:*)",
       "Bash(npx next:*)",
       "Bash(ls orders:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(npx npm:*)"
     ]
   }
 }

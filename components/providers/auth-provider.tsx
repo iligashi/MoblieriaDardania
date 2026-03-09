@@ -8,7 +8,7 @@ interface AuthContextType {
   customer: Customer | null
   isLoggedIn: boolean
   isLoading: boolean
-  login: (email: string, password: string) => Promise<{ error?: string }>
+  login: (email: string, password: string) => Promise<{ error?: string; isAdmin?: boolean }>
   register: (email: string, password: string, firstName: string, lastName: string) => Promise<{ error?: string }>
   logout: () => Promise<void>
   refreshCustomer: () => Promise<void>
@@ -98,8 +98,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const login = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) return { error: error.message }
+
+    // Check if this user is an admin
+    if (data.user) {
+      const { data: adminCheck } = await supabase
+        .from("admin_users")
+        .select("id")
+        .eq("id", data.user.id)
+        .single()
+
+      if (adminCheck) {
+        return { isAdmin: true }
+      }
+    }
+
     return {}
   }
 

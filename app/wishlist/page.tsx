@@ -1,7 +1,6 @@
 "use client"
 
 import { useWishlist } from "@/components/providers/wishlist-provider"
-import { useAuth } from "@/components/providers/auth-provider"
 import { ProductCard } from "@/components/product-card"
 import { Heart } from "lucide-react"
 import Link from "next/link"
@@ -9,9 +8,8 @@ import { Button } from "@/components/ui/button"
 
 export default function WishlistPage() {
   const { items, isLoading } = useWishlist()
-  const { isLoggedIn, isLoading: authLoading } = useAuth()
 
-  if (isLoading || authLoading) {
+  if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-12">
         <div className="animate-pulse space-y-4">
@@ -20,19 +18,6 @@ export default function WishlistPage() {
             {[1, 2, 3, 4].map((i) => <div key={i} className="h-64 bg-muted rounded" />)}
           </div>
         </div>
-      </div>
-    )
-  }
-
-  if (!isLoggedIn) {
-    return (
-      <div className="container mx-auto px-4 py-16 text-center">
-        <Heart className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
-        <h1 className="text-2xl font-bold mb-2">Lista e deshirave</h1>
-        <p className="text-muted-foreground mb-6">Kycu per te pare listen e deshirave tuaja.</p>
-        <Button asChild>
-          <Link href="/account/login">Kycu</Link>
-        </Button>
       </div>
     )
   }

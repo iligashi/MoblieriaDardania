@@ -25,6 +25,10 @@ export default function CustomerLoginPage() {
     if (result.error) {
       toast.error(result.error)
       setIsLoading(false)
+    } else if (result.isAdmin) {
+      toast.success("Mire se vini, Admin!")
+      router.push("/admin/dashboard")
+      router.refresh()
     } else {
       toast.success("Kycja u krye me sukses!")
       router.push("/account")

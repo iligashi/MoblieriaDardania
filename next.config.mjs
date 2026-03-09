@@ -9,6 +9,7 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  middlewareClientMaxBodySize: '25mb',
 }
 
 export default nextConfig
