@@ -11,7 +11,7 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey, {
 })
 
 async function createAdminUser() {
-  const email = "admin@admin.com"
+  const email = "ilazgashi258@gmail.com"
   const password = "IlazGashi123"
 
   try {
@@ -19,7 +19,7 @@ async function createAdminUser() {
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email,
       password,
-      email_confirm: true, // Auto-confirm the email
+      email_confirm: true,
       user_metadata: {
         role: "admin",
       },
@@ -30,25 +30,25 @@ async function createAdminUser() {
       return
     }
 
-    console.log("✅ Admin user created successfully!")
+    console.log("Admin user created successfully!")
     console.log("User ID:", authData.user.id)
     console.log("Email:", authData.user.email)
 
-    // Insert into admins table
-    const { error: adminError } = await supabase.from("admins").insert({
-      user_id: authData.user.id,
+    // Insert into admin_users table
+    const { error: adminError } = await supabase.from("admin_users").insert({
+      id: authData.user.id,
       email: email,
     })
 
     if (adminError) {
-      console.error("Error inserting into admins table:", adminError)
+      console.error("Error inserting into admin_users table:", adminError)
       return
     }
 
-    console.log("✅ Admin record created in admins table!")
+    console.log("Admin record created in admin_users table!")
     console.log("\nYou can now login with:")
-    console.log("Email: admin@admin.com")
-    console.log("Password: IlazGashi123")
+    console.log(`Email: ${email}`)
+    console.log(`Password: ${password}`)
   } catch (error) {
     console.error("Unexpected error:", error)
   }

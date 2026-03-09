@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import type { Furniture, CustomField } from "@/lib/types"
+import type { Furniture, CustomField, Category } from "@/lib/types"
 import { CustomFieldBuilder } from "@/components/admin/custom-field-builder"
 import { DynamicFieldRenderer } from "@/components/dynamic-field-renderer"
 import { X, Plus, UploadCloud, Loader2 } from "lucide-react"
@@ -22,8 +22,6 @@ interface FurnitureFormProps {
   furniture?: Furniture
 }
 
-// Default fallbacks
-const DEFAULT_CATEGORIES = ["sofa", "chair", "table", "bed", "desk", "cabinet", "shelf", "other"]
 const DEFAULT_MATERIALS = ["wood", "metal", "plastic", "glass", "fabric", "leather", "mixed"]
 const DEFAULT_COLORS = ["white", "black", "brown", "gray", "beige", "blue", "green", "red", "other"]
 
@@ -31,29 +29,39 @@ export function FurnitureForm({ furniture }: FurnitureFormProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES)
+  const [dbCategories, setDbCategories] = useState<Category[]>([])
   const [materials, setMaterials] = useState<string[]>(DEFAULT_MATERIALS)
   const [colors, setColors] = useState<string[]>(DEFAULT_COLORS)
   const [isLoadingSettings, setIsLoadingSettings] = useState(true)
-  const [newCategory, setNewCategory] = useState("")
   const [newMaterial, setNewMaterial] = useState("")
   const [newColor, setNewColor] = useState("")
 
   const [formData, setFormData] = useState({
     title: furniture?.title || "",
+    slug: (furniture as any)?.slug || "",
+    category_id: (furniture as any)?.category_id || "",
     category: furniture?.category || "",
+    short_description: (furniture as any)?.short_description || "",
     description: furniture?.description || "",
     price: furniture?.price || 0,
-    length: furniture?.dimensions.length || 0,
-    width: furniture?.dimensions.width || 0,
-    height: furniture?.dimensions.height || 0,
-    unit: furniture?.dimensions.unit || "cm",
+    discount_price: (furniture as any)?.discount_price || "",
+    sku: (furniture as any)?.sku || "",
+    brand: (furniture as any)?.brand || "",
+    length: furniture?.dimensions?.length || 0,
+    width: furniture?.dimensions?.width || 0,
+    height: furniture?.dimensions?.height || 0,
+    unit: furniture?.dimensions?.unit || "cm",
     material: furniture?.material || "",
     color: furniture?.color || "",
     weight: furniture?.weight || 0,
     weight_unit: furniture?.weight_unit || "kg",
     stock: furniture?.stock || 0,
     images: furniture?.images || [],
+    is_featured: (furniture as any)?.is_featured || false,
+    is_bestseller: (furniture as any)?.is_bestseller || false,
+    is_new: (furniture as any)?.is_new ?? true,
+    is_active: (furniture as any)?.is_active ?? true,
+    tags: (furniture as any)?.tags || [],
   })
 
   const [imageInput, setImageInput] = useState("")
@@ -74,17 +82,28 @@ export function FurnitureForm({ furniture }: FurnitureFormProps) {
     return {}
   })
 
-  // Fetch settings on mount
   useEffect(() => {
     fetchSettings()
+    fetchCategories()
   }, [])
+
+  const fetchCategories = async () => {
+    try {
+      const res = await fetch("/api/categories")
+      if (res.ok) {
+        const data = await res.json()
+        setDbCategories(data)
+      }
+    } catch (err) {
+      console.error("Error fetching categories:", err)
+    }
+  }
 
   const fetchSettings = async () => {
     try {
       const response = await fetch("/api/settings")
       if (response.ok) {
         const data = await response.json()
-        if (data.categories) setCategories(data.categories)
         if (data.materials) setMaterials(data.materials)
         if (data.colors) setColors(data.colors)
       }
@@ -95,46 +114,32 @@ export function FurnitureForm({ furniture }: FurnitureFormProps) {
     }
   }
 
-  const addCategory = async () => {
-    if (!newCategory.trim()) return
-    const trimmed = newCategory.trim().toLowerCase()
-    if (categories.includes(trimmed)) {
-      toast.error("Category already exists")
-      return
-    }
-    const updated = [...categories, trimmed]
-    setCategories(updated)
-    await saveSetting("categories", updated)
-    setNewCategory("")
-    toast.success("Category added")
-  }
-
   const addMaterial = async () => {
     if (!newMaterial.trim()) return
     const trimmed = newMaterial.trim().toLowerCase()
     if (materials.includes(trimmed)) {
-      toast.error("Material already exists")
+      toast.error("Materiali ekziston")
       return
     }
     const updated = [...materials, trimmed]
     setMaterials(updated)
     await saveSetting("materials", updated)
     setNewMaterial("")
-    toast.success("Material added")
+    toast.success("Materiali u shtua")
   }
 
   const addColor = async () => {
     if (!newColor.trim()) return
     const trimmed = newColor.trim().toLowerCase()
     if (colors.includes(trimmed)) {
-      toast.error("Color already exists")
+      toast.error("Ngjyra ekziston")
       return
     }
     const updated = [...colors, trimmed]
     setColors(updated)
     await saveSetting("colors", updated)
     setNewColor("")
-    toast.success("Color added")
+    toast.success("Ngjyra u shtua")
   }
 
   const saveSetting = async (key: string, value: string[]) => {
@@ -149,56 +154,86 @@ export function FurnitureForm({ furniture }: FurnitureFormProps) {
     }
   }
 
+  // Flatten categories for select (parent > child)
+  const flatCategories: { id: string; name: string; slug: string }[] = []
+  dbCategories.forEach((cat) => {
+    flatCategories.push({ id: cat.id, name: cat.name, slug: cat.slug })
+    if (cat.children) {
+      cat.children.forEach((sub) => {
+        flatCategories.push({ id: sub.id, name: `${cat.name} > ${sub.name}`, slug: sub.slug })
+      })
+    }
+  })
+
+  const handleCategoryChange = (categoryId: string) => {
+    const selected = flatCategories.find((c) => c.id === categoryId)
+    setFormData({
+      ...formData,
+      category_id: categoryId,
+      category: selected?.slug || "",
+    })
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     setError(null)
 
     try {
-      const payload = {
+      const payload: Record<string, unknown> = {
         title: formData.title,
+        slug: formData.slug || formData.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") + "-" + Date.now().toString(36),
         category: formData.category,
+        category_id: formData.category_id || null,
+        short_description: formData.short_description || null,
         description: formData.description,
         price: Number(formData.price),
-        dimensions: {
+        discount_price: formData.discount_price ? Number(formData.discount_price) : null,
+        sku: formData.sku || null,
+        brand: formData.brand || null,
+        dimensions: (formData.length || formData.width || formData.height) ? {
           length: Number(formData.length),
           width: Number(formData.width),
           height: Number(formData.height),
           unit: formData.unit,
-        },
-        material: formData.material,
-        color: formData.color,
-        weight: Number(formData.weight),
-        weight_unit: formData.weight_unit,
+        } : null,
+        material: formData.material || null,
+        color: formData.color || null,
+        weight: formData.weight ? Number(formData.weight) : null,
+        weight_unit: formData.weight_unit || "kg",
         stock: Number(formData.stock),
         images: formData.images,
+        is_featured: formData.is_featured,
+        is_bestseller: formData.is_bestseller,
+        is_new: formData.is_new,
+        is_active: formData.is_active,
+        tags: formData.tags,
         customFields: customFields.map((field) => ({
           ...field,
           fieldValue: customFieldValues[field.fieldKey] ?? field.fieldValue,
         })),
       }
 
-      const url = furniture ? `/api/furniture/${furniture.id}` : "/api/furniture"
+      const url = furniture ? `/api/products/${furniture.id}` : "/api/products"
       const method = furniture ? "PUT" : "POST"
 
       const response = await fetch(url, {
         method,
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       })
 
       if (!response.ok) {
         const data = await response.json()
-        throw new Error(data.error || "Failed to save furniture")
+        throw new Error(data.error || "Deshtoi ruajtja e produktit")
       }
 
+      toast.success(furniture ? "Produkti u ndryshua!" : "Produkti u shtua!")
       router.push("/admin/dashboard")
       router.refresh()
     } catch (error) {
-      console.error("[v0] Error saving furniture:", error)
-      setError(error instanceof Error ? error.message : "An error occurred")
+      console.error("Error saving product:", error)
+      setError(error instanceof Error ? error.message : "Ndodhi nje gabim")
     } finally {
       setIsLoading(false)
     }
@@ -206,10 +241,9 @@ export function FurnitureForm({ furniture }: FurnitureFormProps) {
 
   const addImage = () => {
     if (imageInput.trim()) {
-      const url = imageInput.trim()
       setFormData((prev) => ({
         ...prev,
-        images: [...prev.images, url],
+        images: [...prev.images, imageInput.trim()],
       }))
       setImageInput("")
     }
@@ -228,9 +262,7 @@ export function FurnitureForm({ furniture }: FurnitureFormProps) {
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
-    if (!file) {
-      return
-    }
+    if (!file) return
 
     setIsUploading(true)
     try {
@@ -245,7 +277,7 @@ export function FurnitureForm({ furniture }: FurnitureFormProps) {
 
       if (!response.ok) {
         const data = await response.json().catch(() => null)
-        throw new Error(data?.error || "Image upload failed.")
+        throw new Error(data?.error || "Ngarkimi deshtoi")
       }
 
       const data = await response.json()
@@ -254,18 +286,16 @@ export function FurnitureForm({ furniture }: FurnitureFormProps) {
           ...prev,
           images: [...prev.images, data.url as string],
         }))
-        toast.success("Image uploaded successfully.")
+        toast.success("Imazhi u ngarkua!")
       } else {
-        throw new Error("Upload did not return a URL.")
+        throw new Error("Ngarkimi nuk ktheu URL")
       }
     } catch (error) {
-      console.error("[upload] Error uploading image:", error)
-      toast.error(error instanceof Error ? error.message : "Unable to upload image.")
+      console.error("Error uploading image:", error)
+      toast.error(error instanceof Error ? error.message : "Nuk mund te ngarkohet imazhi")
     } finally {
       setIsUploading(false)
-      if (event.target) {
-        event.target.value = ""
-      }
+      if (event.target) event.target.value = ""
     }
   }
 
@@ -275,7 +305,7 @@ export function FurnitureForm({ furniture }: FurnitureFormProps) {
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="title">Title *</Label>
+              <Label htmlFor="title">Titulli *</Label>
               <Input
                 id="title"
                 required
@@ -285,55 +315,65 @@ export function FurnitureForm({ furniture }: FurnitureFormProps) {
             </div>
 
             <div className="grid gap-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="category">Category *</Label>
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button type="button" variant="ghost" size="sm" className="h-7 text-xs">
-                      <Plus className="h-3 w-3 mr-1" />
-                      Add New
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Add New Category</DialogTitle>
-                      <DialogDescription>Add a new category to the list</DialogDescription>
-                    </DialogHeader>
-                    <div className="flex gap-2">
-                      <Input
-                        placeholder="Category name"
-                        value={newCategory}
-                        onChange={(e) => setNewCategory(e.target.value)}
-                        onKeyPress={(e) => e.key === "Enter" && addCategory()}
-                      />
-                      <Button onClick={addCategory} type="button">
-                        Add
-                      </Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
+              <Label htmlFor="category">Kategoria *</Label>
+              {flatCategories.length > 0 ? (
+                <Select
+                  value={formData.category_id}
+                  onValueChange={handleCategoryChange}
+                  required
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Zgjidhni kategorine" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {flatCategories.map((cat) => (
+                      <SelectItem key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="text-sm text-muted-foreground p-3 bg-muted/30 rounded-lg">
+                  Nuk ka kategori. <a href="/admin/categories" className="text-primary hover:underline">Shto kategori</a> me pare.
+                </div>
+              )}
+            </div>
+
+            {/* SKU + Brand */}
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-2">
+                <Label htmlFor="sku">SKU</Label>
+                <Input
+                  id="sku"
+                  placeholder="p.sh. PRD-001"
+                  value={formData.sku}
+                  onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                />
               </div>
-              <Select
-                value={formData.category}
-                onValueChange={(value) => setFormData({ ...formData, category: value })}
-                required
-                disabled={isLoadingSettings}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((cat) => (
-                    <SelectItem key={cat} value={cat}>
-                      {cat.charAt(0).toUpperCase() + cat.slice(1)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="grid gap-2">
+                <Label htmlFor="brand">Brendi</Label>
+                <Input
+                  id="brand"
+                  placeholder="p.sh. Bosch, Samsung"
+                  value={formData.brand}
+                  onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
+                />
+              </div>
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="description">Description *</Label>
+              <Label htmlFor="short_description">Pershkrim i shkurter</Label>
+              <Input
+                id="short_description"
+                placeholder="Pershkrim i shkurter per kartelat e produktit"
+                value={formData.short_description}
+                onChange={(e) => setFormData({ ...formData, short_description: e.target.value })}
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="description">Pershkrimi *</Label>
               <Textarea
                 id="description"
                 required
@@ -343,58 +383,109 @@ export function FurnitureForm({ furniture }: FurnitureFormProps) {
               />
             </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="price">Price ($) *</Label>
-              <Input
-                id="price"
-                type="number"
-                step="0.01"
-                min="0"
-                required
-                value={formData.price}
-                onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
-              />
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-2">
+                <Label htmlFor="price">Cmimi (EUR) *</Label>
+                <Input
+                  id="price"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  required
+                  value={formData.price}
+                  onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="discount_price">Cmimi me zbritje (EUR)</Label>
+                <Input
+                  id="discount_price"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="Lere bosh nese ska zbritje"
+                  value={formData.discount_price}
+                  onChange={(e) => setFormData({ ...formData, discount_price: e.target.value })}
+                />
+              </div>
+            </div>
+
+            {/* Product Flags */}
+            <div className="flex flex-wrap gap-4 p-4 bg-muted/30 rounded-lg">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.is_active}
+                  onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+                  className="h-4 w-4 accent-primary rounded"
+                />
+                <span className="text-sm font-medium">Aktiv</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.is_new}
+                  onChange={(e) => setFormData({ ...formData, is_new: e.target.checked })}
+                  className="h-4 w-4 accent-blue-600 rounded"
+                />
+                <span className="text-sm font-medium">I ri</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.is_featured}
+                  onChange={(e) => setFormData({ ...formData, is_featured: e.target.checked })}
+                  className="h-4 w-4 accent-yellow-600 rounded"
+                />
+                <span className="text-sm font-medium">I veqante (Featured)</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.is_bestseller}
+                  onChange={(e) => setFormData({ ...formData, is_bestseller: e.target.checked })}
+                  className="h-4 w-4 accent-green-600 rounded"
+                />
+                <span className="text-sm font-medium">Me i shitur (Bestseller)</span>
+              </label>
             </div>
 
             <div className="grid gap-4 md:grid-cols-4">
               <div className="grid gap-2">
-                <Label htmlFor="length">Length *</Label>
+                <Label htmlFor="length">Gjatesia</Label>
                 <Input
                   id="length"
                   type="number"
                   step="0.01"
                   min="0"
-                  required
                   value={formData.length}
                   onChange={(e) => setFormData({ ...formData, length: Number(e.target.value) })}
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="width">Width *</Label>
+                <Label htmlFor="width">Gjeresia</Label>
                 <Input
                   id="width"
                   type="number"
                   step="0.01"
                   min="0"
-                  required
                   value={formData.width}
                   onChange={(e) => setFormData({ ...formData, width: Number(e.target.value) })}
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="height">Height *</Label>
+                <Label htmlFor="height">Lartesia</Label>
                 <Input
                   id="height"
                   type="number"
                   step="0.01"
                   min="0"
-                  required
                   value={formData.height}
                   onChange={(e) => setFormData({ ...formData, height: Number(e.target.value) })}
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="unit">Unit *</Label>
+                <Label htmlFor="unit">Njesia</Label>
                 <Select value={formData.unit} onValueChange={(value) => setFormData({ ...formData, unit: value })}>
                   <SelectTrigger>
                     <SelectValue />
@@ -411,29 +502,27 @@ export function FurnitureForm({ furniture }: FurnitureFormProps) {
             <div className="grid gap-4 md:grid-cols-2">
               <div className="grid gap-2">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="material">Material *</Label>
+                  <Label htmlFor="material">Materiali</Label>
                   <Dialog>
                     <DialogTrigger asChild>
                       <Button type="button" variant="ghost" size="sm" className="h-7 text-xs">
                         <Plus className="h-3 w-3 mr-1" />
-                        Add New
+                        Shto
                       </Button>
                     </DialogTrigger>
                     <DialogContent>
                       <DialogHeader>
-                        <DialogTitle>Add New Material</DialogTitle>
-                        <DialogDescription>Add a new material to the list</DialogDescription>
+                        <DialogTitle>Shto Material</DialogTitle>
+                        <DialogDescription>Shto nje material te ri ne liste</DialogDescription>
                       </DialogHeader>
                       <div className="flex gap-2">
                         <Input
-                          placeholder="Material name"
+                          placeholder="Emri i materialit"
                           value={newMaterial}
                           onChange={(e) => setNewMaterial(e.target.value)}
-                          onKeyPress={(e) => e.key === "Enter" && addMaterial()}
+                          onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addMaterial())}
                         />
-                        <Button onClick={addMaterial} type="button">
-                          Add
-                        </Button>
+                        <Button onClick={addMaterial} type="button">Shto</Button>
                       </div>
                     </DialogContent>
                   </Dialog>
@@ -441,11 +530,10 @@ export function FurnitureForm({ furniture }: FurnitureFormProps) {
                 <Select
                   value={formData.material}
                   onValueChange={(value) => setFormData({ ...formData, material: value })}
-                  required
                   disabled={isLoadingSettings}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select material" />
+                    <SelectValue placeholder="Zgjidhni materialin" />
                   </SelectTrigger>
                   <SelectContent>
                     {materials.map((mat) => (
@@ -459,29 +547,27 @@ export function FurnitureForm({ furniture }: FurnitureFormProps) {
 
               <div className="grid gap-2">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="color">Color *</Label>
+                  <Label htmlFor="color">Ngjyra</Label>
                   <Dialog>
                     <DialogTrigger asChild>
                       <Button type="button" variant="ghost" size="sm" className="h-7 text-xs">
                         <Plus className="h-3 w-3 mr-1" />
-                        Add New
+                        Shto
                       </Button>
                     </DialogTrigger>
                     <DialogContent>
                       <DialogHeader>
-                        <DialogTitle>Add New Color</DialogTitle>
-                        <DialogDescription>Add a new color to the list</DialogDescription>
+                        <DialogTitle>Shto Ngjyre</DialogTitle>
+                        <DialogDescription>Shto nje ngjyre te re ne liste</DialogDescription>
                       </DialogHeader>
                       <div className="flex gap-2">
                         <Input
-                          placeholder="Color name"
+                          placeholder="Emri i ngjyres"
                           value={newColor}
                           onChange={(e) => setNewColor(e.target.value)}
-                          onKeyPress={(e) => e.key === "Enter" && addColor()}
+                          onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addColor())}
                         />
-                        <Button onClick={addColor} type="button">
-                          Add
-                        </Button>
+                        <Button onClick={addColor} type="button">Shto</Button>
                       </div>
                     </DialogContent>
                   </Dialog>
@@ -489,11 +575,10 @@ export function FurnitureForm({ furniture }: FurnitureFormProps) {
                 <Select
                   value={formData.color}
                   onValueChange={(value) => setFormData({ ...formData, color: value })}
-                  required
                   disabled={isLoadingSettings}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select color" />
+                    <SelectValue placeholder="Zgjidhni ngjyren" />
                   </SelectTrigger>
                   <SelectContent>
                     {colors.map((col) => (
@@ -508,19 +593,18 @@ export function FurnitureForm({ furniture }: FurnitureFormProps) {
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="grid gap-2">
-                <Label htmlFor="weight">Weight *</Label>
+                <Label htmlFor="weight">Pesha</Label>
                 <Input
                   id="weight"
                   type="number"
                   step="0.01"
                   min="0"
-                  required
                   value={formData.weight}
                   onChange={(e) => setFormData({ ...formData, weight: Number(e.target.value) })}
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="weight_unit">Weight Unit *</Label>
+                <Label htmlFor="weight_unit">Njesia e peshes</Label>
                 <Select
                   value={formData.weight_unit}
                   onValueChange={(value) => setFormData({ ...formData, weight_unit: value })}
@@ -537,7 +621,7 @@ export function FurnitureForm({ furniture }: FurnitureFormProps) {
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="stock">Stock *</Label>
+              <Label htmlFor="stock">Stoku *</Label>
               <Input
                 id="stock"
                 type="number"
@@ -549,10 +633,10 @@ export function FurnitureForm({ furniture }: FurnitureFormProps) {
             </div>
 
             <div className="grid gap-2">
-              <Label>Images</Label>
+              <Label>Imazhet</Label>
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                 <Input
-                  placeholder="Enter image URL"
+                  placeholder="Vendos URL te imazhit"
                   value={imageInput}
                   onChange={(e) => setImageInput(e.target.value)}
                   onKeyDown={(e) => {
@@ -563,19 +647,17 @@ export function FurnitureForm({ furniture }: FurnitureFormProps) {
                   }}
                 />
                 <div className="flex flex-col gap-2 sm:flex-row sm:w-auto">
-                  <Button type="button" onClick={addImage}>
-                    Add
-                  </Button>
+                  <Button type="button" onClick={addImage}>Shto</Button>
                   <Button type="button" variant="outline" onClick={handleUploadClick} disabled={isUploading}>
                     {isUploading ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Uploading...
+                        Duke ngarkuar...
                       </>
                     ) : (
                       <>
                         <UploadCloud className="mr-2 h-4 w-4" />
-                        Upload Image
+                        Ngarko Imazh
                       </>
                     )}
                   </Button>
@@ -614,9 +696,9 @@ export function FurnitureForm({ furniture }: FurnitureFormProps) {
             {/* Custom Fields Section */}
             <div className="space-y-4">
               <div>
-                <h3 className="text-lg font-semibold mb-2">Custom Fields</h3>
+                <h3 className="text-lg font-semibold mb-2">Fusha te personalizuara</h3>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Add custom fields to display additional information on the product detail page.
+                  Shtoni fusha te personalizuara per te shfaqur informata shtese ne faqen e produktit.
                 </p>
               </div>
               <CustomFieldBuilder
@@ -624,11 +706,10 @@ export function FurnitureForm({ furniture }: FurnitureFormProps) {
                 initialFields={customFields}
                 onFieldsChange={setCustomFields}
               />
-              
-              {/* Custom Fields Input Section */}
+
               {customFields.length > 0 && (
                 <div className="mt-6 space-y-4">
-                  <h4 className="text-base font-medium">Fill Custom Field Values</h4>
+                  <h4 className="text-base font-medium">Ploteso vlerat e fushave</h4>
                   <DynamicFieldRenderer
                     fields={customFields}
                     values={customFieldValues}
@@ -646,10 +727,10 @@ export function FurnitureForm({ furniture }: FurnitureFormProps) {
 
           <div className="flex gap-4">
             <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Saving..." : furniture ? "Update Furniture" : "Add Furniture"}
+              {isLoading ? "Duke ruajtur..." : furniture ? "Ndrysho Produktin" : "Shto Produktin"}
             </Button>
             <Button type="button" variant="outline" onClick={() => router.push("/admin/dashboard")}>
-              Cancel
+              Anulo
             </Button>
           </div>
         </form>

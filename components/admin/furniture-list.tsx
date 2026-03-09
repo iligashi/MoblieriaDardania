@@ -68,7 +68,7 @@ export function FurnitureList({ furniture, searchQuery = "", categoryFilter = "a
 
     setIsDeleting(true)
     try {
-      const response = await fetch(`/api/furniture/${deleteId}`, {
+      const response = await fetch(`/api/products/${deleteId}`, {
         method: "DELETE",
       })
 
@@ -150,7 +150,7 @@ export function FurnitureList({ furniture, searchQuery = "", categoryFilter = "a
                         <Badge variant="outline" className="capitalize text-xs">
                           {item.category}
                         </Badge>
-                        <span className="text-xs font-semibold text-foreground">${item.price.toFixed(2)}</span>
+                        <span className="text-xs font-semibold text-foreground">{item.price.toFixed(2)} €</span>
                       </div>
                     </div>
                   </TableCell>
@@ -160,7 +160,7 @@ export function FurnitureList({ furniture, searchQuery = "", categoryFilter = "a
                     </Badge>
                   </TableCell>
                   <TableCell className="hidden md:table-cell">
-                    <div className="font-semibold text-foreground">${item.price.toFixed(2)}</div>
+                    <div className="font-semibold text-foreground">{item.price.toFixed(2)} €</div>
                   </TableCell>
                   <TableCell>
                     <Badge variant={getStockBadgeVariant(item.stock)}>
@@ -176,13 +176,13 @@ export function FurnitureList({ furniture, searchQuery = "", categoryFilter = "a
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem asChild>
-                          <Link href={`/furniture/${item.id}`} className="flex items-center">
+                          <Link href={`/products/${(item as any).slug || item.id}`} className="flex items-center">
                             <Eye className="mr-2 h-4 w-4" />
-                            View
+                            Shiko
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
-                          <Link href={`/admin/furniture/${item.id}/edit`} className="flex items-center">
+                          <Link href={`/admin/products/${item.id}/edit`} className="flex items-center">
                             <Edit className="mr-2 h-4 w-4" />
                             Edit
                           </Link>

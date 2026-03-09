@@ -10,9 +10,10 @@ interface PaginationProps {
   totalPages: number
   totalItems: number
   itemsPerPage: number
+  basePath?: string
 }
 
-export function Pagination({ currentPage, totalPages, totalItems, itemsPerPage }: PaginationProps) {
+export function Pagination({ currentPage, totalPages, totalItems, itemsPerPage, basePath = "/" }: PaginationProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -23,8 +24,8 @@ export function Pagination({ currentPage, totalPages, totalItems, itemsPerPage }
     } else {
       params.set("page", page.toString())
     }
-    router.push(`/?${params.toString()}`)
-    // Scroll to top of products section
+    const queryString = params.toString()
+    router.push(queryString ? `${basePath}?${queryString}` : basePath)
     window.scrollTo({ top: 0, behavior: "smooth" })
   }
 
