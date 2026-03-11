@@ -2,8 +2,7 @@
 
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Button } from "@/components/ui/button"
-import { Search, X, Filter } from "lucide-react"
+import { Search, X } from "lucide-react"
 import { useState } from "react"
 
 interface DashboardFiltersProps {
@@ -20,63 +19,38 @@ export function DashboardFilters({
   categories,
 }: DashboardFiltersProps) {
   const [search, setSearch] = useState("")
-  const [category, setCategory] = useState("all")
-  const [stockFilter, setStockFilter] = useState("all")
 
   const handleSearchChange = (value: string) => {
     setSearch(value)
     onSearchChange(value)
   }
 
-  const handleCategoryChange = (value: string) => {
-    setCategory(value)
-    onCategoryChange(value)
-  }
-
-  const handleStockFilterChange = (value: string) => {
-    setStockFilter(value)
-    onStockFilterChange(value)
-  }
-
-  const clearFilters = () => {
-    setSearch("")
-    setCategory("all")
-    setStockFilter("all")
-    onSearchChange("")
-    onCategoryChange("all")
-    onStockFilterChange("all")
-  }
-
-  const hasActiveFilters = search !== "" || category !== "all" || stockFilter !== "all"
-
   return (
-    <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-      <div className="relative flex-1 w-full sm:max-w-sm">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+    <div className="flex flex-col sm:flex-row gap-2.5">
+      <div className="relative flex-1">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Search by title, category, or description..."
+          placeholder="Kerko produkte..."
           value={search}
           onChange={(e) => handleSearchChange(e.target.value)}
-          className="pl-10 pr-10"
+          className="pl-9 h-9 text-sm"
         />
         {search && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
+          <button
+            className="absolute right-3 top-1/2 -translate-y-1/2"
             onClick={() => handleSearchChange("")}
           >
-            <X className="h-3 w-3" />
-          </Button>
+            <X className="h-3.5 w-3.5 text-muted-foreground" />
+          </button>
         )}
       </div>
 
-      <Select value={category} onValueChange={handleCategoryChange}>
-        <SelectTrigger className="w-full sm:w-[180px]">
-          <SelectValue placeholder="All Categories" />
+      <Select defaultValue="all" onValueChange={onCategoryChange}>
+        <SelectTrigger className="w-full sm:w-[160px] h-9 text-sm">
+          <SelectValue placeholder="Kategoria" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">All Categories</SelectItem>
+          <SelectItem value="all">Te gjitha</SelectItem>
           {categories.map((cat) => (
             <SelectItem key={cat} value={cat}>
               {cat.charAt(0).toUpperCase() + cat.slice(1)}
@@ -85,24 +59,17 @@ export function DashboardFilters({
         </SelectContent>
       </Select>
 
-      <Select value={stockFilter} onValueChange={handleStockFilterChange}>
-        <SelectTrigger className="w-full sm:w-[180px]">
-          <SelectValue placeholder="Stock Status" />
+      <Select defaultValue="all" onValueChange={onStockFilterChange}>
+        <SelectTrigger className="w-full sm:w-[160px] h-9 text-sm">
+          <SelectValue placeholder="Stoku" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">All Stock</SelectItem>
-          <SelectItem value="in-stock">In Stock</SelectItem>
-          <SelectItem value="low-stock">Low Stock (&lt;5)</SelectItem>
-          <SelectItem value="out-of-stock">Out of Stock</SelectItem>
+          <SelectItem value="all">Te gjitha</SelectItem>
+          <SelectItem value="in-stock">Ne stok</SelectItem>
+          <SelectItem value="low-stock">Stok i ulet (&lt;5)</SelectItem>
+          <SelectItem value="out-of-stock">Pa stok</SelectItem>
         </SelectContent>
       </Select>
-
-      {hasActiveFilters && (
-        <Button variant="outline" size="sm" onClick={clearFilters} className="w-full sm:w-auto">
-          <X className="mr-2 h-4 w-4" />
-          Clear Filters
-        </Button>
-      )}
     </div>
   )
 }

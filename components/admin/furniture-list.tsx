@@ -1,10 +1,9 @@
 "use client"
 
 import type { Furniture } from "@/lib/types"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Edit, Trash2, Eye, MoreVertical } from "lucide-react"
+import { Edit, Trash2, Eye, MoreVertical, Package } from "lucide-react"
 import Link from "next/link"
 import { useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
@@ -39,48 +38,32 @@ export function FurnitureList({ furniture, searchQuery = "", categoryFilter = "a
 
   const filteredFurniture = useMemo(() => {
     return furniture.filter((item) => {
-      // Search filter
       if (searchQuery) {
-        const searchLower = searchQuery.toLowerCase()
-        const matchesSearch =
-          item.title.toLowerCase().includes(searchLower) ||
-          item.category.toLowerCase().includes(searchLower) ||
-          item.description.toLowerCase().includes(searchLower)
-        if (!matchesSearch) return false
+        const q = searchQuery.toLowerCase()
+        const matches =
+          item.title.toLowerCase().includes(q) ||
+          item.category.toLowerCase().includes(q) ||
+          item.description.toLowerCase().includes(q)
+        if (!matches) return false
       }
-
-      // Category filter
-      if (categoryFilter !== "all" && item.category !== categoryFilter) {
-        return false
-      }
-
-      // Stock filter
+      if (categoryFilter !== "all" && item.category !== categoryFilter) return false
       if (stockFilter === "low-stock" && item.stock >= 5) return false
       if (stockFilter === "out-of-stock" && item.stock > 0) return false
       if (stockFilter === "in-stock" && item.stock === 0) return false
-
       return true
     })
   }, [furniture, searchQuery, categoryFilter, stockFilter])
 
   const handleDelete = async () => {
     if (!deleteId) return
-
     setIsDeleting(true)
     try {
-      const response = await fetch(`/api/products/${deleteId}`, {
-        method: "DELETE",
-      })
-
-      if (!response.ok) {
-        throw new Error("Failed to delete furniture")
-      }
-
+      const response = await fetch(`/api/products/${deleteId}`, { method: "DELETE" })
+      if (!response.ok) throw new Error()
       router.refresh()
       setDeleteId(null)
-    } catch (error) {
-      console.error("[v0] Error deleting furniture:", error)
-      alert("Failed to delete furniture. Please try again.")
+    } catch {
+      alert("Deshtoi fshirja e produktit.")
     } finally {
       setIsDeleting(false)
     }
@@ -88,142 +71,125 @@ export function FurnitureList({ furniture, searchQuery = "", categoryFilter = "a
 
   if (furniture.length === 0) {
     return (
-      <div className="rounded-xl border-2 border-dashed bg-card/50 p-12 text-center">
-        <p className="text-muted-foreground text-lg">No furniture items yet. Add your first item to get started.</p>
+      <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border/60 bg-muted/30 py-12 text-center">
+        <Package className="h-10 w-10 text-muted-foreground/50" />
+        <p className="text-muted-foreground">Nuk ka produkte ende. Shtoni produktin e pare.</p>
       </div>
     )
   }
 
   if (filteredFurniture.length === 0) {
     return (
-      <div className="rounded-xl border-2 border-dashed bg-card/50 p-12 text-center">
-        <p className="text-muted-foreground text-lg">No items match your filters. Try adjusting your search criteria.</p>
+      <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border/60 bg-muted/30 py-12 text-center">
+        <p className="text-muted-foreground">Nuk u gjet asnje produkt me keto filtra.</p>
       </div>
     )
   }
 
-  const getStockBadgeVariant = (stock: number) => {
-    if (stock === 0) return "destructive"
-    if (stock < 5) return "secondary"
-    return "default"
-  }
-
   return (
     <>
-      <div className="rounded-xl border bg-white dark:bg-gray-900 shadow-lg overflow-hidden">
-        <div className="overflow-x-auto">
-          <div className="min-w-[640px]">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/50">
-                  <TableHead className="w-[80px] sm:w-[100px]">Image</TableHead>
-                  <TableHead className="min-w-[150px] sm:min-w-[200px]">Title</TableHead>
-                  <TableHead className="hidden sm:table-cell">Category</TableHead>
-                  <TableHead className="hidden md:table-cell">Price</TableHead>
-                  <TableHead>Stock</TableHead>
-                  <TableHead className="text-right w-[100px] sm:w-[120px]">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-            <TableBody>
-              {filteredFurniture.map((item) => (
-                <TableRow key={item.id} className="hover:bg-muted/50 transition-colors">
-                  <TableCell>
-                    <div className="relative h-16 w-16 rounded-lg overflow-hidden border border-border">
-                      {item.images[0] ? (
-                        <img
-                          src={item.images[0] || "/placeholder.svg"}
-                          alt={item.title}
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <div className="h-full w-full bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center">
-                          <span className="text-xs text-muted-foreground">No Image</span>
-                        </div>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div>
-                      <div className="font-semibold text-sm sm:text-base text-foreground">{item.title}</div>
-                      <div className="text-xs text-muted-foreground line-clamp-1 mt-1">{item.description}</div>
-                      <div className="sm:hidden mt-1 flex items-center gap-2 flex-wrap">
-                        <Badge variant="outline" className="capitalize text-xs">
-                          {item.category}
-                        </Badge>
-                        <span className="text-xs font-semibold text-foreground">{item.price.toFixed(2)} €</span>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="hidden sm:table-cell">
-                    <Badge variant="outline" className="capitalize">
-                      {item.category}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    <div className="font-semibold text-foreground">{item.price.toFixed(2)} €</div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={getStockBadgeVariant(item.stock)}>
-                      {item.stock === 0 ? "Out of Stock" : item.stock < 5 ? `Low (${item.stock})` : item.stock}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-9 w-9 sm:h-8 sm:w-8 p-0 touch-manipulation min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem asChild>
-                          <Link href={`/products/${(item as any).slug || item.id}`} className="flex items-center">
-                            <Eye className="mr-2 h-4 w-4" />
-                            Shiko
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <Link href={`/admin/products/${item.id}/edit`} className="flex items-center">
-                            <Edit className="mr-2 h-4 w-4" />
-                            Edit
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => setDeleteId(item.id)}
-                          className="text-destructive focus:text-destructive"
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+      <div className="space-y-2">
+        {filteredFurniture.map((item) => (
+          <div
+            key={item.id}
+            className="flex items-center gap-3 p-3 rounded-xl border border-border/60 bg-white hover:border-border transition-colors"
+          >
+            {/* Image */}
+            <div className="h-14 w-14 sm:h-16 sm:w-16 rounded-lg overflow-hidden border border-border/30 shrink-0 bg-[#f8f9fa]">
+              {item.images[0] ? (
+                <img
+                  src={item.images[0]}
+                  alt={item.title}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="h-full w-full flex items-center justify-center">
+                  <Package className="h-5 w-5 text-muted-foreground/40" />
+                </div>
+              )}
+            </div>
+
+            {/* Info */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h4 className="text-sm font-semibold truncate">{item.title}</h4>
+                {item.stock === 0 && (
+                  <Badge variant="destructive" className="text-[10px] px-1.5 py-0">Pa stok</Badge>
+                )}
+                {item.stock > 0 && item.stock < 5 && (
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Stok i ulet ({item.stock})</Badge>
+                )}
+              </div>
+              <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                <span className="text-sm font-bold text-primary">
+                  {item.discount_price ? (
+                    <>
+                      {Number(item.discount_price).toFixed(2)} €
+                      <span className="text-xs text-muted-foreground line-through ml-1">{Number(item.price).toFixed(2)} €</span>
+                    </>
+                  ) : (
+                    `${Number(item.price).toFixed(2)} €`
+                  )}
+                </span>
+                <span className="text-xs text-muted-foreground">·</span>
+                <span className="text-xs text-muted-foreground capitalize">{item.category}</span>
+                {item.stock > 4 && (
+                  <>
+                    <span className="text-xs text-muted-foreground">·</span>
+                    <span className="text-xs text-muted-foreground">Stok: {item.stock}</span>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Actions */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-9 w-9 p-0 shrink-0">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem asChild>
+                  <Link href={`/products/${(item as any).slug || item.id}`} className="flex items-center">
+                    <Eye className="mr-2 h-4 w-4" /> Shiko
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href={`/admin/products/${item.id}/edit`} className="flex items-center">
+                    <Edit className="mr-2 h-4 w-4" /> Ndrysho
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setDeleteId(item.id)}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" /> Fshi
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
-        </div>
-        {filteredFurniture.length > 0 && (
-          <div className="border-t bg-muted/30 px-6 py-4">
-            <p className="text-sm text-muted-foreground">
-              Showing {filteredFurniture.length} of {furniture.length} items
-            </p>
-          </div>
-        )}
+        ))}
       </div>
 
+      {/* Count */}
+      <p className="text-xs text-muted-foreground mt-3">
+        Duke shfaqur {filteredFurniture.length} nga {furniture.length} produkte
+      </p>
+
+      {/* Delete dialog */}
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogTitle>Jeni te sigurt?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the furniture item from the database.
+              Ky veprim nuk mund te kthehet. Produkti do te fshihet perfundimisht.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>Anulo</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} disabled={isDeleting}>
-              {isDeleting ? "Deleting..." : "Delete"}
+              {isDeleting ? "Duke fshire..." : "Fshi"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
