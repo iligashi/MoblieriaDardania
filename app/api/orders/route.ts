@@ -114,29 +114,38 @@ export async function POST(request: Request) {
       }
     }
 
-    // Create order
+    // Create order (explicitly null legacy fields so NOT NULL constraints don't block)
+    const orderPayload: Record<string, unknown> = {
+      order_number: orderNumber,
+      customer_id: customerId,
+      customer_name,
+      customer_email: customer_email || null,
+      customer_phone,
+      billing_address: billing_address || null,
+      shipping_address: shipping_address || null,
+      subtotal,
+      shipping_cost: shipping_cost || 0,
+      total,
+      payment_method: payment_method || "cash_on_delivery",
+      notes: notes || null,
+      send_via_whatsapp: send_via_whatsapp || false,
+      status: "pending",
+      // Legacy fields - set first item data as fallback
+      furniture_id: items[0]?.product_id || null,
+      furniture_title: items[0]?.product_title || customer_name,
+      furniture_price: total,
+    }
+
     const { data: order, error: orderError } = await supabaseAdmin
       .from("orders")
-      .insert([{
-        order_number: orderNumber,
-        customer_id: customerId,
-        customer_name,
-        customer_email,
-        customer_phone,
-        billing_address,
-        shipping_address,
-        subtotal,
-        shipping_cost: shipping_cost || 0,
-        total,
-        payment_method: payment_method || "cash_on_delivery",
-        notes,
-        send_via_whatsapp: send_via_whatsapp || false,
-        status: "pending",
-      }])
+      .insert([orderPayload])
       .select()
       .single()
 
-    if (orderError) throw orderError
+    if (orderError) {
+      console.error("Order insert error details:", orderError)
+      throw orderError
+    }
 
     // Create order items and decrement stock
     const orderItems = items.map((item: { product_id: string; product_title: string; product_image: string | null; price: number; quantity: number }) => ({
@@ -157,27 +166,31 @@ export async function POST(request: Request) {
       console.error("Error creating order items:", itemsError)
     }
 
-    // Decrement stock for each product
+    // Decrement stock for each product (non-blocking, never fail the order)
     for (const item of items) {
-      await supabaseAdmin.rpc("decrement_stock", {
-        p_product_id: item.product_id,
-        p_quantity: item.quantity,
-      }).catch(() => {
-        // Fallback: manual decrement if RPC doesn't exist
-        supabaseAdmin
-          .from("products")
-          .select("stock")
-          .eq("id", item.product_id)
-          .single()
-          .then(({ data: product }) => {
-            if (product) {
-              supabaseAdmin
-                .from("products")
-                .update({ stock: Math.max(0, product.stock - item.quantity) })
-                .eq("id", item.product_id)
-            }
-          })
-      })
+      try {
+        const { error: rpcError } = await supabaseAdmin.rpc("decrement_stock", {
+          p_product_id: item.product_id,
+          p_quantity: item.quantity,
+        })
+        if (rpcError) {
+          // Fallback: manual decrement if RPC doesn't exist
+          const { data: product } = await supabaseAdmin
+            .from("products")
+            .select("stock")
+            .eq("id", item.product_id)
+            .single()
+          if (product) {
+            await supabaseAdmin
+              .from("products")
+              .update({ stock: Math.max(0, product.stock - item.quantity) })
+              .eq("id", item.product_id)
+          }
+        }
+      } catch {
+        // Stock update failed - log but don't fail the order
+        console.error("Stock decrement failed for product:", item.product_id)
+      }
     }
 
     return NextResponse.json({ order }, { status: 201 })
