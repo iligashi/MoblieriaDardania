@@ -79,7 +79,7 @@ const customFieldSchema = z
     fieldKey: z.string().max(100),
     fieldLabel: z.string().max(200),
     fieldValue: z.unknown().optional(),
-    fieldOptions: z.record(z.unknown()).optional(),
+    fieldOptions: z.record(z.string(), z.unknown()).optional(),
     displayOrder: z.coerce.number().int().min(0).max(1000),
     isRequired: z.boolean(),
     isVisible: z.boolean(),
@@ -164,6 +164,28 @@ export const categorySchema = z.object({
 
 export const categoryUpdateSchema = categorySchema.partial()
 
+/**
+ * Keeps the category tree two levels deep: a parent must be top-level and
+ * can't be the category itself, and a category that has children can't
+ * become a child. Returns an error message, or null when the move is fine.
+ */
+export async function checkCategoryParent(
+  db: { from: (table: string) => any },
+  parentId: string | null | undefined,
+  selfId?: string,
+): Promise<string | null> {
+  if (!parentId) return null
+  if (parentId === selfId) return "Kategoria nuk mund te jete prind i vetes"
+  const { data: parent } = await db.from("categories").select("id, parent_id").eq("id", parentId).maybeSingle()
+  if (!parent) return "Kategoria prind nuk ekziston"
+  if (parent.parent_id) return "Prindi duhet te jete kategori kryesore"
+  if (selfId) {
+    const { count } = await db.from("categories").select("id", { count: "exact", head: true }).eq("parent_id", selfId)
+    if (count) return "Nje kategori me nenkategori nuk mund te behet nenkategori"
+  }
+  return null
+}
+
 export const SETTINGS_KEYS = ["categories", "materials", "colors"] as const
 export const settingSchema = z.object({
   key: z.enum(SETTINGS_KEYS),
@@ -231,6 +253,8 @@ export const checkoutSchema = z.object({
     .max(1000)
     .nullish()
     .transform((v) => (v ? v : null)),
+  /** Honeypot. Hidden from people; bots that fill every field get rejected. */
+  website: z.string().max(200).optional(),
 })
 
 export const cartAddSchema = z.object({

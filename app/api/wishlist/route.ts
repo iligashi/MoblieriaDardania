@@ -3,6 +3,7 @@ import { z } from "zod"
 import { createClient } from "@/lib/supabase/server"
 import { createServiceRoleClient } from "@/lib/supabase/service-role"
 import { parseJson, UUID_RE } from "@/lib/validation"
+import { rateLimit } from "@/lib/rate-limit"
 
 export async function GET() {
   try {
@@ -30,6 +31,9 @@ export async function GET() {
 const addSchema = z.object({ product_id: z.string().regex(UUID_RE) })
 
 export async function POST(request: Request) {
+  const limited = await rateLimit(request, "wishlist")
+  if (limited) return limited
+
   const parsed = await parseJson(request, addSchema)
   if ("error" in parsed) return parsed.error
 

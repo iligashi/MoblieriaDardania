@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { requireAdminApi } from "@/lib/auth/admin"
-import { categoryUpdateSchema, isUuid, parseJson, slugify } from "@/lib/validation"
+import { categoryUpdateSchema, checkCategoryParent, isUuid, parseJson, slugify } from "@/lib/validation"
 
 type Params = { params: Promise<{ id: string }> }
 
@@ -16,8 +16,9 @@ export async function PUT(request: Request, { params }: Params) {
 
   const update: Record<string, unknown> = { ...parsed.data }
   if (typeof parsed.data.slug === "string") update.slug = slugify(parsed.data.slug)
-  if (update.parent_id === id) {
-    return NextResponse.json({ error: "Kategoria nuk mund te jete prind i vetes" }, { status: 400 })
+  if ("parent_id" in parsed.data) {
+    const parentError = await checkCategoryParent(auth.db, parsed.data.parent_id, id)
+    if (parentError) return NextResponse.json({ error: parentError }, { status: 400 })
   }
 
   try {

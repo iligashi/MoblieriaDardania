@@ -3,6 +3,7 @@ import { createServiceRoleClient } from "@/lib/supabase/service-role"
 import { resolveCartOwner } from "@/lib/cart-owner"
 import { cartAddSchema, parseJson } from "@/lib/validation"
 import { SHOP } from "@/lib/shop-config"
+import { rateLimit } from "@/lib/rate-limit"
 
 const CART_SELECT = "*, product:products(*)"
 
@@ -62,6 +63,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const limited = await rateLimit(request, "cart")
+  if (limited) return limited
+
   const parsed = await parseJson(request, cartAddSchema)
   if ("error" in parsed) return parsed.error
   const { product_id, quantity } = parsed.data

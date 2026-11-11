@@ -38,7 +38,7 @@ function RegisterForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
-    if (form.password.length < 8) return setError("Fjalëkalimi duhet të ketë të paktën 8 karaktere.")
+    if (form.password.length < 10) return setError("Fjalëkalimi duhet të ketë të paktën 10 karaktere.")
     if (form.password !== form.confirm) return setError("Fjalëkalimet nuk përputhen.")
 
     setLoading(true)
@@ -118,7 +118,7 @@ function RegisterForm() {
             autoComplete="new-password"
             value={form.password}
             onChange={set("password")}
-            minLength={8}
+            minLength={10}
             required
           />
           <div className="flex gap-1 pt-1" aria-hidden>
@@ -132,7 +132,7 @@ function RegisterForm() {
               />
             ))}
           </div>
-          <p className="text-xs text-muted-foreground">Të paktën 8 karaktere. Përdorni shkronja të mëdha dhe numra.</p>
+          <p className="text-xs text-muted-foreground">Të paktën 10 karaktere. Përdorni shkronja të mëdha dhe numra.</p>
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="confirm">Konfirmo fjalëkalimin</Label>

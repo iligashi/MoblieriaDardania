@@ -105,8 +105,10 @@ export function CheckoutClient() {
     )
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    // Read synchronously: the event's currentTarget is gone after the first await.
+    const honeypot = new FormData(e.currentTarget).get("website")
     const found = validate(form)
     setErrors(found)
     if (Object.keys(found).length) {
@@ -139,6 +141,8 @@ export function CheckoutClient() {
           billing_address: address,
           payment_method: form.payment_method,
           notes: form.notes.trim() || null,
+          // Honeypot: real visitors never see or fill this field.
+          website: typeof honeypot === "string" ? honeypot : "",
         }),
       })
       const data = await res.json().catch(() => null)
@@ -162,6 +166,10 @@ export function CheckoutClient() {
       <h1 className="mt-3 font-display text-5xl leading-none sm:text-6xl">Përfundo porosinë</h1>
 
       <form onSubmit={handleSubmit} noValidate className="mt-10 grid gap-10 lg:grid-cols-[1fr_420px] lg:gap-14">
+        <div aria-hidden className="absolute -left-[9999px] h-px w-px overflow-hidden">
+          <label htmlFor="website">Website</label>
+          <input id="website" name="website" type="text" tabIndex={-1} autoComplete="off" defaultValue="" />
+        </div>
         <div className="space-y-5">
           <Section step={1} title="Të dhënat e kontaktit">
             <div className="grid gap-4 sm:grid-cols-2">

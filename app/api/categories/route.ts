@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { requireAdminApi } from "@/lib/auth/admin"
-import { categorySchema, parseJson, slugify } from "@/lib/validation"
+import { categorySchema, checkCategoryParent, parseJson, slugify } from "@/lib/validation"
 import type { Category } from "@/lib/types"
 
 function buildTree(categories: Category[]) {
@@ -54,6 +54,9 @@ export async function POST(request: Request) {
     const input = parsed.data
     const slug = slugify(input.slug || input.name)
     if (!slug) return NextResponse.json({ error: "Slug nuk eshte valid" }, { status: 400 })
+
+    const parentError = await checkCategoryParent(auth.db, input.parent_id)
+    if (parentError) return NextResponse.json({ error: parentError }, { status: 400 })
 
     const { data, error } = await auth.db
       .from("categories")
