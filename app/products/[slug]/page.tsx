@@ -1,278 +1,266 @@
-import { createClient } from "@/lib/supabase/server"
-import { notFound } from "next/navigation"
-import { ImageCarousel } from "@/components/image-carousel"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
+import { cache } from "react"
+import type { Metadata } from "next"
 import Link from "next/link"
-import { ChevronRight, Check, Truck, Shield, RotateCcw, Package, Ruler, Palette, Weight } from "lucide-react"
-import { CustomFieldsDisplay } from "@/components/dynamic-field-renderer"
+import { notFound } from "next/navigation"
+import { BadgeCheck, ChevronRight, RotateCcw, Truck } from "lucide-react"
+import { createClient } from "@/lib/supabase/server"
+import { ImageCarousel } from "@/components/image-carousel"
 import { AddToCartButton } from "@/components/add-to-cart-button"
 import { WhatsAppButton } from "@/components/whatsapp-button"
-import { ProductCard } from "@/components/product-card"
-import type { Metadata } from "next"
+import { ProductCard, ProductGrid } from "@/components/product-card"
+import { Price, discountPercent } from "@/components/price"
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import { isUuid } from "@/lib/validation"
+import { SHOP, formatPrice, unitPrice } from "@/lib/shop-config"
+import { SITE_URL } from "@/lib/site"
+import type { Category, CustomField, Product } from "@/lib/types"
+
+const getProduct = cache(async (slug: string) => {
+  const supabase = await createClient()
+  const column = isUuid(slug) ? "id" : "slug"
+  const { data } = await supabase
+    .from("products")
+    .select("*")
+    .eq(column, slug)
+    .eq("is_active", true)
+    .maybeSingle()
+  return data as Product | null
+})
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
-  const supabase = await createClient()
-  const { data } = await supabase.from("products").select("title, short_description").or(`slug.eq.${slug},id.eq.${slug}`).single()
+  const product = await getProduct(slug)
+  if (!product) return { title: "Produkti nuk u gjet" }
+  const description = product.short_description || product.description?.slice(0, 160) || product.title
+  const url = `/products/${product.slug || product.id}`
   return {
-    title: data?.title || "Produkt",
-    description: data?.short_description || data?.title,
+    title: product.title,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      title: product.title,
+      description,
+      url,
+      images: product.images?.slice(0, 4).map((src) => ({ url: src })),
+    },
   }
 }
 
-export default async function ProductDetailPage({
-  params,
-}: {
-  params: Promise<{ slug: string }>
-}) {
+export default async function ProductDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
+  const product = await getProduct(slug)
+  if (!product) notFound()
+
   const supabase = await createClient()
+  const [categoryResult, relatedResult] = await Promise.all([
+    product.category_id
+      ? supabase.from("categories").select("*").eq("id", product.category_id).maybeSingle()
+      : Promise.resolve({ data: null }),
+    (product.category_id
+      ? supabase.from("products").select("*").eq("category_id", product.category_id)
+      : supabase.from("products").select("*").eq("category", product.category)
+    )
+      .eq("is_active", true)
+      .neq("id", product.id)
+      .order("is_bestseller", { ascending: false })
+      .limit(4),
+  ])
+  const category = categoryResult.data as Category | null
+  const related = (relatedResult.data as Product[]) ?? []
 
-  // Fetch by slug or ID
-  const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug)
-  const query = isUUID
-    ? supabase.from("products").select("*").eq("id", slug)
-    : supabase.from("products").select("*").eq("slug", slug)
+  const off = discountPercent(product)
+  const outOfStock = product.stock <= 0
+  const lowStock = !outOfStock && product.stock <= SHOP.lowStockThreshold
+  const customFields = (Array.isArray(product.custom_fields) ? product.custom_fields : []).filter(
+    (f: CustomField) => f.isVisible && f.fieldValue !== undefined && f.fieldValue !== "",
+  )
 
-  const { data: product, error } = await query.single()
+  const specs: [string, string][] = []
+  if (product.dimensions && (product.dimensions.length || product.dimensions.width || product.dimensions.height)) {
+    const d = product.dimensions
+    specs.push(["Dimensionet (G × Gj × L)", `${d.length} × ${d.width} × ${d.height} ${d.unit || "cm"}`])
+  }
+  if (product.material) specs.push(["Materiali", product.material])
+  if (product.color) specs.push(["Ngjyra", product.color])
+  if (product.weight) specs.push(["Pesha", `${product.weight} ${product.weight_unit || "kg"}`])
+  if (product.brand) specs.push(["Marka", product.brand])
+  if (product.sku) specs.push(["SKU", product.sku])
+  for (const f of customFields.sort((a, b) => a.displayOrder - b.displayOrder)) {
+    const v = f.fieldValue
+    specs.push([f.fieldLabel, typeof v === "boolean" ? (v ? "Po" : "Jo") : Array.isArray(v) ? v.join(", ") : String(v)])
+  }
 
-  if (error || !product) notFound()
-
-  // Fetch related products
-  const { data: related } = await supabase
-    .from("products")
-    .select("*")
-    .eq("is_active", true)
-    .eq("category", product.category)
-    .neq("id", product.id)
-    .limit(4)
-
-  const hasDiscount = product.discount_price && product.discount_price < product.price
-  const discountPercent = hasDiscount
-    ? Math.round(((product.price - product.discount_price!) / product.price) * 100)
-    : 0
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: product.title,
+    description: product.short_description || product.description,
+    sku: product.sku || undefined,
+    brand: product.brand ? { "@type": "Brand", name: product.brand } : undefined,
+    image: product.images,
+    offers: {
+      "@type": "Offer",
+      url: `${SITE_URL}/products/${product.slug || product.id}`,
+      priceCurrency: "EUR",
+      price: unitPrice(product).toFixed(2),
+      availability: outOfStock ? "https://schema.org/OutOfStock" : "https://schema.org/InStock",
+    },
+  }
 
   return (
-    <div className="bg-white">
-      {/* Breadcrumb */}
-      <div className="bg-[#f8f9fa] border-b border-border/50">
-        <div className="container mx-auto px-4 py-3">
-          <nav className="flex items-center gap-1.5 text-sm text-muted-foreground">
-            <Link href="/" className="hover:text-foreground transition-colors">Ballina</Link>
-            <ChevronRight className="h-3.5 w-3.5" />
-            <Link href="/shop" className="hover:text-foreground transition-colors">Dyqani</Link>
-            {product.category && (
-              <>
-                <ChevronRight className="h-3.5 w-3.5" />
-                <Link href={`/shop?category=${product.category}`} className="hover:text-foreground transition-colors capitalize">
-                  {product.category}
-                </Link>
-              </>
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
+      />
+
+      <div className="container-page pt-6 lg:pt-10">
+        <nav aria-label="Navigimi" className="flex items-center gap-1.5 overflow-hidden text-xs text-muted-foreground">
+          <Link href="/" className="shrink-0 hover:text-foreground">
+            Ballina
+          </Link>
+          <ChevronRight className="size-3 shrink-0" />
+          <Link href="/shop" className="shrink-0 hover:text-foreground">
+            Dyqani
+          </Link>
+          {category && (
+            <>
+              <ChevronRight className="size-3 shrink-0" />
+              <Link href={`/shop?category=${category.slug}`} className="shrink-0 hover:text-foreground">
+                {category.name}
+              </Link>
+            </>
+          )}
+          <ChevronRight className="size-3 shrink-0" />
+          <span className="truncate text-foreground">{product.title}</span>
+        </nav>
+
+        <div className="mt-6 grid gap-10 lg:grid-cols-[1.15fr_1fr] lg:gap-16">
+          <ImageCarousel images={product.images ?? []} title={product.title} />
+
+          <div className="lg:sticky lg:top-28 lg:self-start">
+            <div className="flex flex-wrap items-center gap-2">
+              {off > 0 && (
+                <span className="rounded-full bg-primary px-2.5 py-1 text-xs font-semibold text-primary-foreground">
+                  −{off}% zbritje
+                </span>
+              )}
+              {product.is_new && <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-semibold">E re</span>}
+              {product.is_bestseller && (
+                <span className="rounded-full bg-highlight/40 px-2.5 py-1 text-xs font-semibold text-highlight-foreground">
+                  Më e shitur
+                </span>
+              )}
+            </div>
+
+            {product.brand && (
+              <p className="mt-4 text-xs font-medium tracking-[0.16em] text-muted-foreground uppercase">{product.brand}</p>
             )}
-            <ChevronRight className="h-3.5 w-3.5" />
-            <span className="text-foreground font-medium truncate max-w-[200px]">{product.title}</span>
-          </nav>
-        </div>
-      </div>
+            <h1 className="mt-2 font-display text-4xl leading-[1.05] text-balance sm:text-5xl">{product.title}</h1>
 
-      {/* Product Section */}
-      <section className="container mx-auto px-4 py-6 sm:py-8">
-        <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 max-w-6xl mx-auto">
-          {/* Image Gallery */}
-          <div>
-            {product.images && product.images.length > 0 ? (
-              <ImageCarousel images={product.images} title={product.title} />
-            ) : (
-              <div className="aspect-square rounded-xl bg-[#f8f9fa] flex items-center justify-center">
-                <img src="/placeholder.svg" alt={product.title} className="h-2/3 w-2/3 object-contain" />
-              </div>
+            <Price product={product} size="lg" className="mt-5" />
+            {off > 0 && (
+              <p className="mt-1 text-sm text-success">Kurseni {formatPrice(product.price - unitPrice(product))}</p>
             )}
-          </div>
 
-          {/* Product Info */}
-          <div>
-            {/* SKU & Brand */}
-            <div className="flex items-center gap-3 mb-2">
-              {product.sku && (
-                <span className="text-xs text-muted-foreground">SKU: {product.sku}</span>
-              )}
-              {product.brand && (
-                <Badge variant="outline" className="text-xs">{product.brand}</Badge>
-              )}
-            </div>
-
-            {/* Title */}
-            <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-4 leading-tight">
-              {product.title}
-            </h1>
-
-            {/* Price */}
-            <div className="flex items-baseline gap-3 mb-4">
-              <span className="text-3xl font-bold text-foreground">
-                {(hasDiscount ? product.discount_price! : product.price).toFixed(2)} &euro;
-              </span>
-              {hasDiscount && (
-                <>
-                  <span className="text-lg text-muted-foreground line-through">
-                    {product.price.toFixed(2)} &euro;
-                  </span>
-                  <Badge className="bg-red-600 text-white border-0">-{discountPercent}%</Badge>
-                </>
-              )}
-            </div>
-
-            {/* Stock Status */}
-            <div className="flex items-center gap-2 mb-6">
-              {product.stock > 0 ? (
-                <div className="flex items-center gap-1.5 text-sm text-green-600">
-                  <Check className="h-4 w-4" />
-                  <span className="font-medium">Ka sasi ({product.stock} ne stok)</span>
-                </div>
-              ) : (
-                <span className="text-sm font-medium text-destructive">Nuk ka ne stok</span>
-              )}
-            </div>
-
-            {/* Short Description */}
             {product.short_description && (
-              <p className="text-sm text-muted-foreground leading-relaxed mb-6">
-                {product.short_description}
-              </p>
+              <p className="mt-5 leading-relaxed text-muted-foreground">{product.short_description}</p>
             )}
 
-            <Separator className="mb-6" />
+            <p className="mt-6 flex items-center gap-2 text-sm font-medium">
+              <span
+                className={
+                  outOfStock
+                    ? "size-2 rounded-full bg-destructive"
+                    : lowStock
+                      ? "size-2 animate-pulse rounded-full bg-warning"
+                      : "size-2 rounded-full bg-success"
+                }
+              />
+              {outOfStock ? "Momentalisht jo në stok" : lowStock ? `Vetëm ${product.stock} copë të mbetura` : "Në stok — gati për dërgesë"}
+            </p>
 
-            {/* Add to Cart */}
-            <div className="space-y-3 mb-6">
+            <div className="mt-5 space-y-2.5">
               <AddToCartButton product={product} />
               <WhatsAppButton product={product} />
             </div>
 
-            {/* Trust Badges */}
-            <div className="space-y-2.5 p-4 bg-[#f8f9fa] rounded-xl">
-              <div className="flex items-center gap-2.5 text-sm">
-                <Truck className="h-4 w-4 text-primary shrink-0" />
-                <span>24-48 ore ne Kosove</span>
-              </div>
-              <div className="flex items-center gap-2.5 text-sm">
-                <Shield className="h-4 w-4 text-primary shrink-0" />
-                <span>Produkte origjinale me garanci</span>
-              </div>
-              <div className="flex items-center gap-2.5 text-sm">
-                <RotateCcw className="h-4 w-4 text-primary shrink-0" />
-                <span>Kthim brenda 48 oreve</span>
-              </div>
-            </div>
+            <ul className="mt-6 grid gap-3 rounded-2xl border bg-card p-4 text-sm sm:grid-cols-3 sm:gap-2 lg:grid-cols-1 xl:grid-cols-3">
+              <li className="flex items-center gap-2.5">
+                <Truck className="size-4 shrink-0 text-primary" />
+                <span>
+                  Dërgesë 24–48 orë
+                  <span className="block text-xs text-muted-foreground">
+                    Falas mbi {formatPrice(SHOP.freeShippingThreshold)}
+                  </span>
+                </span>
+              </li>
+              <li className="flex items-center gap-2.5">
+                <BadgeCheck className="size-4 shrink-0 text-primary" />
+                <span>
+                  Origjinale
+                  <span className="block text-xs text-muted-foreground">Me garanci</span>
+                </span>
+              </li>
+              <li className="flex items-center gap-2.5">
+                <RotateCcw className="size-4 shrink-0 text-primary" />
+                <span>
+                  Kthim 48 orë
+                  <span className="block text-xs text-muted-foreground">Pa pyetje</span>
+                </span>
+              </li>
+            </ul>
 
-            {/* Category */}
-            <div className="mt-4 text-sm text-muted-foreground">
-              <span>Kategori: </span>
-              <Link href={`/shop?category=${product.category}`} className="text-primary hover:underline capitalize">
-                {product.category}
-              </Link>
-            </div>
+            <Accordion type="multiple" defaultValue={["description"]} className="mt-6">
+              {product.description && (
+                <AccordionItem value="description">
+                  <AccordionTrigger>Përshkrimi</AccordionTrigger>
+                  <AccordionContent>
+                    <p className="leading-relaxed whitespace-pre-line text-muted-foreground">{product.description}</p>
+                  </AccordionContent>
+                </AccordionItem>
+              )}
+              {specs.length > 0 && (
+                <AccordionItem value="specs">
+                  <AccordionTrigger>Specifikimet</AccordionTrigger>
+                  <AccordionContent>
+                    <dl className="divide-y rounded-xl border">
+                      {specs.map(([label, value]) => (
+                        <div key={label} className="grid grid-cols-[1fr_1.4fr] gap-4 px-4 py-3 text-sm">
+                          <dt className="text-muted-foreground">{label}</dt>
+                          <dd className="font-medium capitalize">{value}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </AccordionContent>
+                </AccordionItem>
+              )}
+              <AccordionItem value="shipping">
+                <AccordionTrigger>Dërgesa dhe pagesa</AccordionTrigger>
+                <AccordionContent className="space-y-2 leading-relaxed text-muted-foreground">
+                  <p>
+                    Dërgojmë në të gjithë Kosovën brenda 24–48 orëve. Transporti kushton {formatPrice(SHOP.shippingCost)} dhe
+                    është falas për porosi mbi {formatPrice(SHOP.freeShippingThreshold)}.
+                  </p>
+                  <p>Paguani me para në dorë kur ta pranoni porosinë. Kthimi është i mundur brenda 48 orëve.</p>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
           </div>
         </div>
-      </section>
+      </div>
 
-      {/* Product Tabs / Description */}
-      <section className="bg-[#f8f9fa] border-t border-border/50">
-        <div className="container mx-auto px-4 py-8">
-          <div className="max-w-4xl mx-auto space-y-8">
-            {/* Description */}
-            {product.description && (
-              <div>
-                <h2 className="text-xl font-bold mb-4">Pershkrimi</h2>
-                <div className="prose prose-sm max-w-none text-muted-foreground leading-relaxed whitespace-pre-line">
-                  {product.description}
-                </div>
-              </div>
-            )}
-
-            {/* Specifications */}
-            {(product.dimensions || product.material || product.color || product.weight) && (
-              <div>
-                <h2 className="text-xl font-bold mb-4">Specifikimet</h2>
-                <div className="grid sm:grid-cols-2 gap-3">
-                  {product.dimensions && (
-                    <div className="flex items-center gap-3 p-4 rounded-xl bg-white border border-border/50">
-                      <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                        <Ruler className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Dimensionet</p>
-                        <p className="text-sm font-semibold">
-                          {product.dimensions.length} x {product.dimensions.width} x {product.dimensions.height} {product.dimensions.unit}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                  {product.weight && (
-                    <div className="flex items-center gap-3 p-4 rounded-xl bg-white border border-border/50">
-                      <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                        <Weight className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Pesha</p>
-                        <p className="text-sm font-semibold">{product.weight} {product.weight_unit}</p>
-                      </div>
-                    </div>
-                  )}
-                  {product.color && (
-                    <div className="flex items-center gap-3 p-4 rounded-xl bg-white border border-border/50">
-                      <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                        <Palette className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Ngjyra</p>
-                        <p className="text-sm font-semibold capitalize">{product.color}</p>
-                      </div>
-                    </div>
-                  )}
-                  {product.material && (
-                    <div className="flex items-center gap-3 p-4 rounded-xl bg-white border border-border/50">
-                      <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                        <Package className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Materiali</p>
-                        <p className="text-sm font-semibold capitalize">{product.material}</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Custom Fields */}
-            {product.custom_fields && Array.isArray(product.custom_fields) && product.custom_fields.length > 0 && (
-              <div>
-                <h2 className="text-xl font-bold mb-4">Detaje shtese</h2>
-                <CustomFieldsDisplay
-                  fields={product.custom_fields}
-                  values={product.custom_fields.reduce((acc: Record<string, unknown>, field: { fieldKey: string; fieldValue?: unknown }) => {
-                    acc[field.fieldKey] = field.fieldValue
-                    return acc
-                  }, {})}
-                />
-              </div>
-            )}
-          </div>
-        </div>
-      </section>
-
-      {/* Related Products */}
-      {related && related.length > 0 && (
-        <section className="container mx-auto px-4 py-10">
-          <h2 className="text-xl font-bold mb-6">Produkte te ngjashme</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+      {related.length > 0 && (
+        <section className="container-page pt-24">
+          <p className="eyebrow">Mund t&apos;ju pëlqejnë</p>
+          <h2 className="mt-2 font-display text-4xl sm:text-5xl">Produkte të ngjashme</h2>
+          <ProductGrid className="mt-8">
             {related.map((p) => (
               <ProductCard key={p.id} product={p} />
             ))}
-          </div>
+          </ProductGrid>
         </section>
       )}
-    </div>
+    </>
   )
 }

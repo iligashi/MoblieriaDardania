@@ -1,407 +1,314 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
-import Image from "next/image"
-import { useRouter } from "next/navigation"
+import { usePathname } from "next/navigation"
+import { ArrowRight, ChevronDown, Heart, LogOut, Menu, Package, Phone, Search, ShoppingBag, Truck, User } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useCart } from "@/components/providers/cart-provider"
 import { useWishlist } from "@/components/providers/wishlist-provider"
 import { useAuth } from "@/components/providers/auth-provider"
-import { Button } from "@/components/ui/button"
+import { Logo } from "@/components/logo"
+import { SearchDialog } from "@/components/search-dialog"
+import { CartDrawer } from "@/components/cart-drawer"
+import { MobileNav } from "@/components/mobile-nav"
 import {
-  Search,
-  ShoppingCart,
-  Heart,
-  User,
-  Menu,
-  X,
-  ChevronDown,
-  LogOut,
-  Package,
-  Phone,
-} from "lucide-react"
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { SHOP, formatPrice } from "@/lib/shop-config"
 import type { Category } from "@/lib/types"
 
+const NAV = [
+  { href: "/shop?new=true", label: "Të rejat" },
+  { href: "/shop?bestseller=true", label: "Më të shiturat" },
+]
+
+function CountBadge({ count }: { count: number }) {
+  if (count <= 0) return null
+  return (
+    <span className="absolute -top-0.5 -right-0.5 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground tabular-nums ring-2 ring-background">
+      {count > 99 ? "99+" : count}
+    </span>
+  )
+}
+
+const iconButton =
+  "relative inline-flex size-10 items-center justify-center rounded-full text-foreground transition-colors hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring/30 focus-visible:outline-none"
+
 export function SiteHeader() {
-  const [isScrolled, setIsScrolled] = useState(false)
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const pathname = usePathname()
+  const [scrolled, setScrolled] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
-  const [searchQuery, setSearchQuery] = useState("")
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const [megaOpen, setMegaOpen] = useState(false)
   const [categories, setCategories] = useState<Category[]>([])
-  const [categoryMenuOpen, setCategoryMenuOpen] = useState(false)
-  const searchInputRef = useRef<HTMLInputElement>(null)
-  const router = useRouter()
-  const { itemCount } = useCart()
+  const { itemCount, setOpen: setCartOpen } = useCart()
   const { itemCount: wishlistCount } = useWishlist()
   const { customer, isLoggedIn, logout } = useAuth()
 
   useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 10)
-    window.addEventListener("scroll", handleScroll)
-    return () => window.removeEventListener("scroll", handleScroll)
+    const onScroll = () => setScrolled(window.scrollY > 8)
+    onScroll()
+    window.addEventListener("scroll", onScroll, { passive: true })
+    return () => window.removeEventListener("scroll", onScroll)
   }, [])
 
   useEffect(() => {
-    fetch("/api/categories")
-      .then((r) => r.json())
-      .then(setCategories)
+    const controller = new AbortController()
+    fetch("/api/categories", { signal: controller.signal })
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data) => Array.isArray(data) && setCategories(data))
       .catch(() => {})
+    return () => controller.abort()
   }, [])
 
+  // Close menus on navigation.
   useEffect(() => {
-    if (searchOpen) searchInputRef.current?.focus()
-  }, [searchOpen])
+    setMegaOpen(false)
+    setMobileOpen(false)
+  }, [pathname])
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (searchQuery.trim()) {
-      router.push(`/shop?search=${encodeURIComponent(searchQuery.trim())}`)
-      setSearchOpen(false)
-      setSearchQuery("")
+  // Keyboard shortcut: "/" or Ctrl/Cmd+K opens search.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null
+      const typing = target?.closest("input, textarea, [contenteditable=true]")
+      if ((e.key.toLowerCase() === "k" && (e.metaKey || e.ctrlKey)) || (e.key === "/" && !typing)) {
+        e.preventDefault()
+        setSearchOpen(true)
+      }
     }
-  }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [])
+
+  const firstName = customer?.first_name?.trim()
 
   return (
     <>
-      {/* Top Bar */}
-      <div className="bg-[#1b1f22] text-white text-xs py-2 hidden md:block">
-        <div className="container mx-auto px-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <a href="tel:+38349514788" className="flex items-center gap-1.5 hover:text-[#ffc21f] transition-colors">
-              <Phone className="h-3 w-3" />
-              <span>+383 49 514 788</span>
-            </a>
-            <span className="text-white/40">|</span>
-            <span className="text-white/70">Ore pune: 10:00 - 22:00</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-[#ffc21f] font-medium">Transport falas per porosi mbi 50 EUR</span>
-          </div>
+      {/* Announcement bar */}
+      <div className="bg-ink text-ink-foreground">
+        <div className="container-page flex h-9 items-center justify-center gap-6 text-xs sm:justify-between">
+          <a
+            href={SHOP.contact.phoneHref}
+            className="hidden items-center gap-1.5 text-white/70 transition-colors hover:text-white sm:flex"
+          >
+            <Phone className="size-3.5" />
+            {SHOP.contact.phone}
+          </a>
+          <p className="flex items-center gap-2 font-medium">
+            <Truck className="size-3.5 text-highlight" />
+            Transport falas për porosi mbi {formatPrice(SHOP.freeShippingThreshold)}
+          </p>
+          <span className="hidden text-white/70 sm:block">Çdo ditë {SHOP.contact.hours}</span>
         </div>
       </div>
 
-      {/* Main Header */}
       <header
         className={cn(
-          "sticky top-0 z-50 transition-all duration-300 bg-white border-b",
-          isScrolled ? "shadow-md border-border/50" : "border-transparent"
+          "sticky top-0 z-40 border-b transition-[background-color,border-color,box-shadow] duration-300",
+          scrolled
+            ? "border-border/70 bg-background/85 shadow-[0_8px_30px_-12px_oklch(0.2_0.01_60/0.12)] backdrop-blur-xl"
+            : "border-transparent bg-background",
         )}
       >
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between h-16 lg:h-[72px]">
-            {/* Left: Menu + Logo */}
-            <div className="flex items-center gap-3">
-              <button
-                className="lg:hidden p-2 -ml-2 hover:bg-muted rounded-lg"
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              >
-                {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-              </button>
+        <div className="container-page flex h-16 items-center gap-4 lg:h-[76px]">
+          <button
+            type="button"
+            className={cn(iconButton, "-ml-2 lg:hidden")}
+            onClick={() => setMobileOpen(true)}
+            aria-label="Hap menunë"
+          >
+            <Menu className="size-5" />
+          </button>
 
-              <Link href="/" className="flex items-center gap-2.5">
-                <div className="h-9 w-9 rounded-lg overflow-hidden bg-white border border-border/50 flex items-center justify-center">
-                  <Image
-                    src="/flux-removebg-preview.png"
-                    alt="Logo"
-                    width={36}
-                    height={36}
-                    priority
-                    className="object-contain p-0.5"
-                  />
-                </div>
-                <div className="hidden sm:block">
-                  <span className="text-lg font-black tracking-tight text-[#1b1f22]">FLUX</span>
-                  <span className="text-lg font-light tracking-tight text-primary ml-0.5">DEKOR</span>
-                </div>
-              </Link>
-            </div>
+          <Logo className="shrink-0" />
 
-            {/* Center: Navigation */}
-            <nav className="hidden lg:flex items-center gap-1">
+          {/* Desktop navigation */}
+          <nav className="ml-6 hidden items-center gap-1 lg:flex" aria-label="Navigimi kryesor">
+            <div className="relative" onMouseEnter={() => setMegaOpen(true)} onMouseLeave={() => setMegaOpen(false)}>
               <Link
-                href="/"
-                className="px-3 py-2 text-sm font-medium text-foreground hover:text-primary transition-colors rounded-lg hover:bg-muted/50"
+                href="/shop"
+                className="inline-flex h-10 items-center gap-1 rounded-full px-4 text-sm font-medium transition-colors hover:bg-accent"
+                aria-expanded={megaOpen}
+                onFocus={() => setMegaOpen(true)}
               >
-                Ballina
+                Dyqani
+                <ChevronDown className={cn("size-3.5 transition-transform", megaOpen && "rotate-180")} />
               </Link>
 
               <div
-                className="relative"
-                onMouseEnter={() => setCategoryMenuOpen(true)}
-                onMouseLeave={() => setCategoryMenuOpen(false)}
+                className={cn(
+                  "absolute top-full left-0 pt-3 transition-all duration-200",
+                  megaOpen ? "visible translate-y-0 opacity-100" : "invisible -translate-y-1 opacity-0",
+                )}
               >
-                <Link
-                  href="/shop"
-                  className="px-3 py-2 text-sm font-medium text-foreground hover:text-primary transition-colors rounded-lg hover:bg-muted/50 flex items-center gap-1"
-                >
-                  Dyqani
-                  <ChevronDown className="h-3.5 w-3.5" />
-                </Link>
-
-                {categoryMenuOpen && categories.length > 0 && (
-                  <div className="absolute top-full left-0 pt-2 z-50">
-                    <div className="bg-white rounded-xl shadow-2xl border border-border/50 p-4 min-w-[280px] grid gap-1">
-                      <Link
-                        href="/shop"
-                        className="px-3 py-2.5 text-sm font-medium rounded-lg hover:bg-muted/50 transition-colors"
-                        onClick={() => setCategoryMenuOpen(false)}
-                      >
-                        Te gjitha produktet
+                <div className="grid w-[680px] grid-cols-[1fr_220px] overflow-hidden rounded-2xl border bg-popover shadow-[var(--shadow-lift)]">
+                  <div className="p-6">
+                    <p className="eyebrow mb-4">Kategoritë</p>
+                    {categories.length === 0 ? (
+                      <Link href="/shop" className="text-sm font-medium hover:text-primary">
+                        Shiko të gjitha produktet
                       </Link>
-                      {categories.map((cat) => (
-                        <div key={cat.id}>
-                          <Link
-                            href={`/shop?category=${cat.slug}`}
-                            className="px-3 py-2.5 text-sm rounded-lg hover:bg-muted/50 transition-colors flex items-center justify-between group"
-                            onClick={() => setCategoryMenuOpen(false)}
-                          >
-                            <span className="font-medium group-hover:text-primary transition-colors">{cat.name}</span>
-                            {cat.children && cat.children.length > 0 && (
-                              <span className="text-xs text-muted-foreground">{cat.children.length}</span>
-                            )}
-                          </Link>
-                          {cat.children?.map((sub) => (
+                    ) : (
+                      <div className="grid grid-cols-2 gap-x-6 gap-y-5">
+                        {categories.slice(0, 8).map((cat) => (
+                          <div key={cat.id}>
                             <Link
-                              key={sub.id}
-                              href={`/shop?category=${sub.slug}`}
-                              className="pl-7 pr-3 py-2 text-sm text-muted-foreground rounded-lg hover:bg-muted/50 hover:text-foreground transition-colors block"
-                              onClick={() => setCategoryMenuOpen(false)}
+                              href={`/shop?category=${cat.slug}`}
+                              className="text-sm font-semibold transition-colors hover:text-primary"
                             >
-                              {sub.name}
+                              {cat.name}
                             </Link>
-                          ))}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <Link
-                href="/shop?on_sale=true"
-                className="px-3 py-2 text-sm font-bold text-red-600 hover:text-red-700 transition-colors rounded-lg hover:bg-red-50"
-              >
-                ZBRITJE
-              </Link>
-
-              <Link
-                href="/shop?new=true"
-                className="px-3 py-2 text-sm font-medium text-foreground hover:text-primary transition-colors rounded-lg hover:bg-muted/50"
-              >
-                Te rejat
-              </Link>
-            </nav>
-
-            {/* Right: Search + Actions */}
-            <div className="flex items-center gap-1.5">
-              {/* Search */}
-              <div className="relative">
-                <button
-                  onClick={() => setSearchOpen(!searchOpen)}
-                  className="p-2.5 hover:bg-muted rounded-full transition-colors"
-                >
-                  <Search className="h-5 w-5" />
-                </button>
-              </div>
-
-              {/* Wishlist */}
-              <Link href="/wishlist" className="p-2.5 hover:bg-muted rounded-full transition-colors relative">
-                <Heart className="h-5 w-5" />
-                {wishlistCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 h-4.5 min-w-4.5 flex items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white px-1">
-                    {wishlistCount}
-                  </span>
-                )}
-              </Link>
-
-              {/* Cart */}
-              <Link href="/cart" className="p-2.5 hover:bg-muted rounded-full transition-colors relative">
-                <ShoppingCart className="h-5 w-5" />
-                {itemCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 h-4.5 min-w-4.5 flex items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white px-1">
-                    {itemCount}
-                  </span>
-                )}
-              </Link>
-
-              {/* Account */}
-              {isLoggedIn ? (
-                <div className="relative group">
-                  <button className="p-2.5 hover:bg-muted rounded-full transition-colors">
-                    <User className="h-5 w-5" />
-                  </button>
-                  <div className="absolute right-0 top-full pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
-                    <div className="bg-white rounded-xl shadow-2xl border border-border/50 py-2 min-w-[200px]">
-                      <div className="px-4 py-2 border-b border-border/50 mb-1">
-                        <p className="text-sm font-medium">{customer?.first_name} {customer?.last_name}</p>
-                        <p className="text-xs text-muted-foreground">{customer?.email}</p>
+                            {!!cat.children?.length && (
+                              <ul className="mt-2 space-y-1.5">
+                                {cat.children.slice(0, 5).map((sub) => (
+                                  <li key={sub.id}>
+                                    <Link
+                                      href={`/shop?category=${sub.slug}`}
+                                      className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                                    >
+                                      {sub.name}
+                                    </Link>
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                        ))}
                       </div>
-                      <Link
-                        href="/account"
-                        className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-muted/50 transition-colors"
-                      >
-                        <User className="h-4 w-4" />
-                        Llogaria ime
-                      </Link>
-                      <Link
-                        href="/account/orders"
-                        className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-muted/50 transition-colors"
-                      >
-                        <Package className="h-4 w-4" />
-                        Porosite e mia
-                      </Link>
-                      <button
-                        onClick={logout}
-                        className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-muted/50 transition-colors w-full text-left text-destructive"
-                      >
-                        <LogOut className="h-4 w-4" />
-                        Dil
-                      </button>
-                    </div>
+                    )}
+                    <Link
+                      href="/shop"
+                      className="mt-6 inline-flex items-center gap-1.5 text-sm font-medium text-primary transition-all hover:gap-2.5"
+                    >
+                      Të gjitha produktet <ArrowRight className="size-4" />
+                    </Link>
                   </div>
+                  <Link
+                    href="/shop?on_sale=true"
+                    className="group relative flex flex-col justify-end overflow-hidden bg-ink p-6 text-ink-foreground"
+                  >
+                    <div className="absolute -top-10 -right-10 size-40 rounded-full bg-primary/40 blur-3xl transition-transform duration-500 group-hover:scale-125" />
+                    <div className="absolute bottom-10 -left-10 size-32 rounded-full bg-highlight/30 blur-3xl" />
+                    <span className="eyebrow relative text-white/60">Oferta</span>
+                    <span className="font-display relative mt-2 text-3xl leading-tight">
+                      Zbritjet <em>e javës</em>
+                    </span>
+                    <span className="relative mt-3 inline-flex items-center gap-1.5 text-sm text-white/80 group-hover:text-white">
+                      Zbulo tani <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
+                    </span>
+                  </Link>
                 </div>
-              ) : (
-                <Link href="/account/login" className="p-2.5 hover:bg-muted rounded-full transition-colors">
-                  <User className="h-5 w-5" />
-                </Link>
-              )}
+              </div>
             </div>
+
+            {NAV.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="inline-flex h-10 items-center rounded-full px-4 text-sm font-medium transition-colors hover:bg-accent"
+              >
+                {item.label}
+              </Link>
+            ))}
+            <Link
+              href="/shop?on_sale=true"
+              className="inline-flex h-10 items-center rounded-full px-4 text-sm font-semibold text-primary transition-colors hover:bg-primary/10"
+            >
+              Zbritje
+            </Link>
+          </nav>
+
+          {/* Search field (desktop) */}
+          <button
+            type="button"
+            onClick={() => setSearchOpen(true)}
+            className="ml-auto hidden h-10 w-full max-w-[280px] items-center gap-2.5 rounded-full border border-input bg-card px-4 text-sm text-muted-foreground transition-colors hover:border-foreground/25 md:flex"
+          >
+            <Search className="size-4" />
+            <span className="flex-1 text-left">Kërko produkte…</span>
+            <kbd className="hidden rounded-md border bg-muted px-1.5 py-0.5 font-mono text-[10px] lg:inline">Ctrl K</kbd>
+          </button>
+
+          <div className="ml-auto flex items-center gap-0.5 md:ml-2">
+            <button type="button" className={cn(iconButton, "md:hidden")} onClick={() => setSearchOpen(true)} aria-label="Kërko">
+              <Search className="size-5" />
+            </button>
+
+            <Link
+              href="/wishlist"
+              className={cn(iconButton, "hidden sm:inline-flex")}
+              aria-label={`Lista e dëshirave (${wishlistCount})`}
+            >
+              <Heart className="size-5" />
+              <CountBadge count={wishlistCount} />
+            </Link>
+
+            {isLoggedIn ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger className={cn(iconButton, "hidden sm:inline-flex")} aria-label="Llogaria ime">
+                  <span className="grid size-8 place-items-center rounded-full bg-ink text-xs font-semibold text-ink-foreground uppercase">
+                    {(firstName?.[0] || customer?.email?.[0] || "U").toUpperCase()}
+                  </span>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-60 rounded-2xl p-2">
+                  <DropdownMenuLabel className="px-2 py-2">
+                    <p className="text-sm font-semibold">{firstName ? `Përshëndetje, ${firstName}` : "Llogaria ime"}</p>
+                    <p className="truncate text-xs font-normal text-muted-foreground">{customer?.email}</p>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild className="rounded-lg py-2">
+                    <Link href="/account">
+                      <User className="size-4" /> Llogaria ime
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild className="rounded-lg py-2">
+                    <Link href="/account/orders">
+                      <Package className="size-4" /> Porositë e mia
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild className="rounded-lg py-2">
+                    <Link href="/wishlist">
+                      <Heart className="size-4" /> Lista e dëshirave
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => logout()}
+                    className="rounded-lg py-2 text-destructive focus:text-destructive"
+                  >
+                    <LogOut className="size-4" /> Dil
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Link href="/account/login" className={cn(iconButton, "hidden sm:inline-flex")} aria-label="Kyçu">
+                <User className="size-5" />
+              </Link>
+            )}
+
+            <button
+              type="button"
+              className={iconButton}
+              onClick={() => setCartOpen(true)}
+              aria-label={`Shporta (${itemCount})`}
+            >
+              <ShoppingBag className="size-5" />
+              <CountBadge count={itemCount} />
+            </button>
           </div>
         </div>
-
-        {/* Search Overlay */}
-        {searchOpen && (
-          <div className="absolute top-full left-0 right-0 bg-white border-b border-border shadow-lg z-50">
-            <div className="container mx-auto px-4 py-4">
-              <form onSubmit={handleSearch} className="flex gap-2 max-w-2xl mx-auto">
-                <div className="flex-1 relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <input
-                    ref={searchInputRef}
-                    type="text"
-                    placeholder="Kerko produkte..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full h-11 pl-10 pr-4 rounded-lg border border-border bg-muted/30 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                  />
-                </div>
-                <Button type="submit" className="h-11 px-6">Kerko</Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="h-11"
-                  onClick={() => { setSearchOpen(false); setSearchQuery("") }}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </form>
-            </div>
-          </div>
-        )}
       </header>
 
-      {/* Mobile Menu */}
-      {mobileMenuOpen && (
-        <div className="fixed inset-0 z-40 lg:hidden">
-          <div className="absolute inset-0 bg-black/30" onClick={() => setMobileMenuOpen(false)} />
-          <div className="absolute left-0 top-0 bottom-0 w-[300px] bg-white shadow-2xl overflow-y-auto">
-            <div className="p-4 border-b border-border flex items-center justify-between">
-              <span className="font-bold text-lg">Menu</span>
-              <button onClick={() => setMobileMenuOpen(false)} className="p-2 hover:bg-muted rounded-lg">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <nav className="p-4 space-y-1">
-              <Link
-                href="/"
-                className="block px-3 py-3 text-sm font-medium rounded-lg hover:bg-muted/50"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Ballina
-              </Link>
-              <Link
-                href="/shop"
-                className="block px-3 py-3 text-sm font-medium rounded-lg hover:bg-muted/50"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Dyqani
-              </Link>
-              <Link
-                href="/shop?on_sale=true"
-                className="block px-3 py-3 text-sm font-bold text-red-600 rounded-lg hover:bg-red-50"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                ZBRITJE
-              </Link>
-              <Link
-                href="/shop?new=true"
-                className="block px-3 py-3 text-sm font-medium rounded-lg hover:bg-muted/50"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Te rejat
-              </Link>
-
-              {categories.length > 0 && (
-                <>
-                  <div className="pt-3 pb-1 px-3">
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Kategori</p>
-                  </div>
-                  {categories.map((cat) => (
-                    <div key={cat.id}>
-                      <Link
-                        href={`/shop?category=${cat.slug}`}
-                        className="block px-3 py-2.5 text-sm rounded-lg hover:bg-muted/50"
-                        onClick={() => setMobileMenuOpen(false)}
-                      >
-                        {cat.name}
-                      </Link>
-                      {cat.children?.map((sub) => (
-                        <Link
-                          key={sub.id}
-                          href={`/shop?category=${sub.slug}`}
-                          className="block pl-7 pr-3 py-2 text-sm text-muted-foreground rounded-lg hover:bg-muted/50"
-                          onClick={() => setMobileMenuOpen(false)}
-                        >
-                          {sub.name}
-                        </Link>
-                      ))}
-                    </div>
-                  ))}
-                </>
-              )}
-
-              <div className="pt-4 mt-4 border-t border-border space-y-1">
-                {isLoggedIn ? (
-                  <>
-                    <Link
-                      href="/account"
-                      className="block px-3 py-3 text-sm font-medium rounded-lg hover:bg-muted/50"
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      Llogaria ime
-                    </Link>
-                    <button
-                      onClick={() => { logout(); setMobileMenuOpen(false) }}
-                      className="w-full text-left px-3 py-3 text-sm font-medium text-destructive rounded-lg hover:bg-red-50"
-                    >
-                      Dil
-                    </button>
-                  </>
-                ) : (
-                  <Link
-                    href="/account/login"
-                    className="block px-3 py-3 text-sm font-medium rounded-lg hover:bg-muted/50"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    Kycu / Regjistrohu
-                  </Link>
-                )}
-              </div>
-            </nav>
-          </div>
-        </div>
-      )}
+      <SearchDialog open={searchOpen} onOpenChange={setSearchOpen} categories={categories} />
+      <MobileNav open={mobileOpen} onOpenChange={setMobileOpen} categories={categories} />
+      <CartDrawer />
     </>
   )
 }

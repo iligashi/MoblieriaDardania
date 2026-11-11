@@ -46,7 +46,8 @@ export async function updateSession(request: NextRequest) {
   }
 
   // ---- Customer account pages.
-  if (!user && PROTECTED_ACCOUNT_ROUTES.some((route) => pathname.startsWith(route))) {
+  const isAccountPage = pathname === "/account" || PROTECTED_ACCOUNT_ROUTES.some((route) => pathname.startsWith(route))
+  if (!user && isAccountPage) {
     return redirectTo(request, "/account/login", `?next=${encodeURIComponent(pathname)}`)
   }
 

@@ -1,159 +1,105 @@
 import Link from "next/link"
-import { Instagram, MessageCircle, Phone, Mail, MapPin } from "lucide-react"
+import { Clock, Mail, MapPin, Phone } from "lucide-react"
+import { Logo } from "@/components/logo"
+import { InstagramIcon, WhatsAppIcon } from "@/components/icons"
+import { SHOP, formatPrice, whatsappLink } from "@/lib/shop-config"
+
+const SHOP_LINKS = [
+  { href: "/shop", label: "Të gjitha produktet" },
+  { href: "/shop?new=true", label: "Të rejat" },
+  { href: "/shop?bestseller=true", label: "Më të shiturat" },
+  { href: "/shop?on_sale=true", label: "Zbritje" },
+]
+
+const ACCOUNT_LINKS = [
+  { href: "/account", label: "Llogaria ime" },
+  { href: "/account/orders", label: "Porositë e mia" },
+  { href: "/wishlist", label: "Lista e dëshirave" },
+  { href: "/cart", label: "Shporta" },
+]
 
 export function SiteFooter() {
   return (
-    <footer className="bg-[#1b1f22] text-white">
-      <div className="container mx-auto px-4 py-12">
-        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-          {/* Brand */}
-          <div>
-            <div className="mb-4">
-              <span className="text-xl font-black">FLUX</span>
-              <span className="text-xl font-light text-[#ffc21f] ml-0.5">DEKOR</span>
-            </div>
-            <p className="text-sm text-white/60 leading-relaxed mb-4">
-              Mobileri, dekorime, vegla pune dhe shume me teper. Produkte origjinale me garanci.
-            </p>
-            <div className="flex items-center gap-3">
-              <a
-                href="https://www.instagram.com/dardaniamobileri"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="h-9 w-9 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
-              >
-                <Instagram className="h-4 w-4" />
-              </a>
-              <a
-                href="https://wa.me/38349514788"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="h-9 w-9 rounded-full bg-white/10 flex items-center justify-center hover:bg-[#25d366]/20 transition-colors"
-              >
-                <MessageCircle className="h-4 w-4" />
-              </a>
-            </div>
-          </div>
-
-          {/* Quick Links */}
-          <div>
-            <h3 className="text-sm font-bold uppercase tracking-wider mb-4 text-white/80">Navigimi</h3>
-            <ul className="space-y-2.5">
-              <li>
-                <Link href="/" className="text-sm text-white/60 hover:text-white transition-colors">
-                  Ballina
-                </Link>
-              </li>
-              <li>
-                <Link href="/shop" className="text-sm text-white/60 hover:text-white transition-colors">
-                  Dyqani
-                </Link>
-              </li>
-              <li>
-                <Link href="/shop?on_sale=true" className="text-sm text-white/60 hover:text-white transition-colors">
-                  Zbritje
-                </Link>
-              </li>
-              <li>
-                <Link href="/shop?new=true" className="text-sm text-white/60 hover:text-white transition-colors">
-                  Te rejat
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Customer Service */}
-          <div>
-            <h3 className="text-sm font-bold uppercase tracking-wider mb-4 text-white/80">Sherbim klienti</h3>
-            <ul className="space-y-2.5">
-              <li>
-                <Link href="/account" className="text-sm text-white/60 hover:text-white transition-colors">
-                  Llogaria ime
-                </Link>
-              </li>
-              <li>
-                <Link href="/account/orders" className="text-sm text-white/60 hover:text-white transition-colors">
-                  Gjurmo porosine
-                </Link>
-              </li>
-              <li>
-                <Link href="/wishlist" className="text-sm text-white/60 hover:text-white transition-colors">
-                  Lista e deshirave
-                </Link>
-              </li>
-              <li>
-                <Link href="/cart" className="text-sm text-white/60 hover:text-white transition-colors">
-                  Shporta
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Contact */}
-          <div>
-            <h3 className="text-sm font-bold uppercase tracking-wider mb-4 text-white/80">Kontakt</h3>
-            <ul className="space-y-3">
-              <li className="flex items-start gap-2.5">
-                <Phone className="h-4 w-4 mt-0.5 text-[#ffc21f] shrink-0" />
-                <div>
-                  <a href="tel:+38349514788" className="text-sm text-white/80 hover:text-white transition-colors block">
-                    +383 49 514 788
-                  </a>
-                  <span className="text-xs text-white/40">10:00 - 22:00</span>
-                </div>
-              </li>
-              <li className="flex items-start gap-2.5">
-                <Mail className="h-4 w-4 mt-0.5 text-[#ffc21f] shrink-0" />
-                <a href="mailto:info@fluxdekor.com" className="text-sm text-white/80 hover:text-white transition-colors">
-                  info@fluxdekor.com
-                </a>
-              </li>
-              <li className="flex items-start gap-2.5">
-                <MapPin className="h-4 w-4 mt-0.5 text-[#ffc21f] shrink-0" />
-                <span className="text-sm text-white/60">Kosove</span>
-              </li>
-            </ul>
+    <footer className="mt-24 bg-ink text-ink-foreground">
+      <div className="container-page grid gap-12 py-16 lg:grid-cols-[1.4fr_1fr_1fr_1.2fr]">
+        <div className="max-w-sm">
+          <Logo inverted />
+          <p className="mt-5 text-sm leading-relaxed text-white/60">
+            Mobilje, dekor dhe vegla për shtëpinë tuaj — produkte origjinale me garanci dhe dërgesë në të gjithë Kosovën.
+          </p>
+          <div className="mt-6 flex gap-2">
+            <a
+              href={SHOP.contact.instagram}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Instagram"
+              className="grid size-10 place-items-center rounded-full border border-white/15 transition-colors hover:bg-white/10"
+            >
+              <InstagramIcon className="size-4" />
+            </a>
+            <a
+              href={whatsappLink()}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="WhatsApp"
+              className="grid size-10 place-items-center rounded-full border border-white/15 transition-colors hover:bg-white/10"
+            >
+              <WhatsAppIcon className="size-4" />
+            </a>
           </div>
         </div>
 
-        {/* Trust Badges */}
-        <div className="mt-10 pt-6 border-t border-white/10 grid gap-4 sm:grid-cols-3">
-          <div className="flex items-center gap-3 text-sm text-white/60">
-            <div className="h-10 w-10 rounded-full bg-white/10 flex items-center justify-center shrink-0">
-              <span className="text-lg">🚚</span>
-            </div>
-            <div>
-              <p className="font-medium text-white/80">24-48 ore ne Kosove</p>
-              <p className="text-xs">Transport i shpejte</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3 text-sm text-white/60">
-            <div className="h-10 w-10 rounded-full bg-white/10 flex items-center justify-center shrink-0">
-              <span className="text-lg">✓</span>
-            </div>
-            <div>
-              <p className="font-medium text-white/80">Produkte origjinale</p>
-              <p className="text-xs">Me garanci</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3 text-sm text-white/60">
-            <div className="h-10 w-10 rounded-full bg-white/10 flex items-center justify-center shrink-0">
-              <span className="text-lg">↩</span>
-            </div>
-            <div>
-              <p className="font-medium text-white/80">Kthim brenda 48 oreve</p>
-              <p className="text-xs">Pa pyetje</p>
-            </div>
-          </div>
-        </div>
+        <FooterColumn title="Dyqani" links={SHOP_LINKS} />
+        <FooterColumn title="Llogaria" links={ACCOUNT_LINKS} />
 
-        {/* Bottom */}
-        <div className="mt-8 pt-6 border-t border-white/10 text-center">
-          <p className="text-xs text-white/40">
-            &copy; {new Date().getFullYear()} Flux Dekor. Te gjitha te drejtat te rezervuara.
+        <div>
+          <h3 className="text-xs font-semibold tracking-[0.18em] text-white/50 uppercase">Kontakt</h3>
+          <ul className="mt-5 space-y-3.5 text-sm text-white/75">
+            <li>
+              <a href={SHOP.contact.phoneHref} className="flex items-center gap-3 hover:text-white">
+                <Phone className="size-4 text-white/40" /> {SHOP.contact.phone}
+              </a>
+            </li>
+            <li>
+              <a href={`mailto:${SHOP.contact.email}`} className="flex items-center gap-3 hover:text-white">
+                <Mail className="size-4 text-white/40" /> {SHOP.contact.email}
+              </a>
+            </li>
+            <li className="flex items-center gap-3">
+              <Clock className="size-4 text-white/40" /> Çdo ditë, {SHOP.contact.hours}
+            </li>
+            <li className="flex items-center gap-3">
+              <MapPin className="size-4 text-white/40" /> Dërgesë në gjithë Kosovën
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div className="border-t border-white/10">
+        <div className="container-page flex flex-col gap-3 py-6 text-xs text-white/45 sm:flex-row sm:items-center sm:justify-between">
+          <p>© {new Date().getFullYear()} {SHOP.name}. Të gjitha të drejtat e rezervuara.</p>
+          <p>
+            Transport falas për porosi mbi {formatPrice(SHOP.freeShippingThreshold)} · Pagesa në dorëzim
           </p>
         </div>
       </div>
     </footer>
+  )
+}
+
+function FooterColumn({ title, links }: { title: string; links: { href: string; label: string }[] }) {
+  return (
+    <div>
+      <h3 className="text-xs font-semibold tracking-[0.18em] text-white/50 uppercase">{title}</h3>
+      <ul className="mt-5 space-y-3 text-sm">
+        {links.map((l) => (
+          <li key={l.href}>
+            <Link href={l.href} className="text-white/75 transition-colors hover:text-white">
+              {l.label}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
   )
 }

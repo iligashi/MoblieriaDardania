@@ -2,158 +2,147 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { Heart, Loader2, Plus } from "lucide-react"
+import { toast } from "sonner"
 import type { Product } from "@/lib/types"
 import { useCart } from "@/components/providers/cart-provider"
 import { useWishlist } from "@/components/providers/wishlist-provider"
-import { Heart, ShoppingCart, Eye } from "lucide-react"
+import { Price, discountPercent } from "@/components/price"
+import { SHOP } from "@/lib/shop-config"
 import { cn } from "@/lib/utils"
-import { toast } from "sonner"
 
-interface ProductCardProps {
-  product: Product
-}
-
-export function ProductCard({ product }: ProductCardProps) {
+export function ProductCard({ product, priority = false }: { product: Product; priority?: boolean }) {
   const [imageError, setImageError] = useState(false)
-  const [isAddingToCart, setIsAddingToCart] = useState(false)
+  const [adding, setAdding] = useState(false)
   const { addItem } = useCart()
   const { isInWishlist, toggleItem } = useWishlist()
   const wishlisted = isInWishlist(product.id)
 
-  const imageUrl = product.images?.[0] || "/placeholder.svg"
-  const hasDiscount = product.discount_price && product.discount_price < product.price
-  const discountPercent = hasDiscount
-    ? Math.round(((product.price - product.discount_price!) / product.price) * 100)
-    : 0
-  const displayPrice = hasDiscount ? product.discount_price! : product.price
-  const slug = product.slug || product.id
+  const href = `/products/${product.slug || product.id}`
+  const images = product.images?.filter(Boolean) ?? []
+  const primary = imageError || !images[0] ? "/placeholder.svg" : images[0]
+  const secondary = !imageError && images[1] ? images[1] : null
+  const off = discountPercent(product)
+  const outOfStock = product.stock <= 0
+  const lowStock = !outOfStock && product.stock <= SHOP.lowStockThreshold
 
-  const handleAddToCart = async (e: React.MouseEvent) => {
+  const handleAdd = async (e: React.MouseEvent) => {
     e.preventDefault()
-    e.stopPropagation()
-    if (product.stock <= 0 || isAddingToCart) return
-    setIsAddingToCart(true)
+    if (outOfStock || adding) return
+    setAdding(true)
     try {
       await addItem(product, 1)
-      toast.success(`${product.title} u shtua ne shporte`)
-    } catch {
-      toast.error("Dicka shkoi gabim")
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Diçka shkoi gabim")
     } finally {
-      setIsAddingToCart(false)
+      setAdding(false)
     }
   }
 
   const handleWishlist = async (e: React.MouseEvent) => {
     e.preventDefault()
-    e.stopPropagation()
     try {
       await toggleItem(product.id)
-      toast.success(wishlisted ? "U hoq nga lista e deshirave" : "U shtua ne listen e deshirave")
+      toast.success(wishlisted ? "U hoq nga lista e dëshirave" : "U shtua në listën e dëshirave")
     } catch {
-      toast.error("Kycu per te perdorur listen e deshirave")
+      toast.error("Nuk u ruajt. Provoni përsëri.")
     }
   }
 
   return (
-    <div className="group relative bg-white rounded-lg border border-border/60 overflow-hidden transition-all duration-300 hover:shadow-lg hover:border-border">
-      {/* Image Section */}
-      <Link href={`/products/${slug}`} className="block relative aspect-square overflow-hidden bg-[#f8f9fa]">
+    <article className="group relative flex flex-col">
+      <Link
+        href={href}
+        className="relative block aspect-[4/5] overflow-hidden rounded-2xl bg-muted/70 ring-1 ring-border/60 ring-inset"
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={imageError ? "/placeholder.svg" : imageUrl}
+          src={primary}
           alt={product.title}
-          className="h-full w-full object-contain p-4 transition-transform duration-500 group-hover:scale-105"
+          loading={priority ? "eager" : "lazy"}
           onError={() => setImageError(true)}
-          loading="lazy"
+          className={cn(
+            "absolute inset-0 size-full object-contain p-5 mix-blend-multiply transition-all duration-700 ease-out group-hover:scale-[1.04]",
+            secondary && "group-hover:opacity-0",
+          )}
         />
-
-        {/* Badges */}
-        <div className="absolute top-2 left-2 flex flex-col gap-1.5">
-          {hasDiscount && (
-            <span className="inline-flex items-center justify-center h-6 px-2 rounded bg-red-600 text-white text-xs font-bold">
-              -{discountPercent}%
-            </span>
-          )}
-          {product.is_new && !hasDiscount && (
-            <span className="inline-flex items-center justify-center h-6 px-2 rounded bg-blue-600 text-white text-xs font-bold">
-              E RE
-            </span>
-          )}
-          {product.stock <= 0 && (
-            <span className="inline-flex items-center justify-center h-6 px-2 rounded bg-gray-800 text-white text-xs font-bold">
-              JO NE STOK
-            </span>
-          )}
-        </div>
-
-        {/* Wishlist Button */}
-        <button
-          onClick={handleWishlist}
-          className="absolute top-2 right-2 h-8 w-8 rounded-full bg-white shadow-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:scale-110"
-        >
-          <Heart
-            className={cn(
-              "h-4 w-4 transition-colors",
-              wishlisted ? "fill-red-500 text-red-500" : "text-gray-400"
-            )}
+        {secondary && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={secondary}
+            alt=""
+            loading="lazy"
+            className="absolute inset-0 size-full object-contain p-5 opacity-0 mix-blend-multiply transition-all duration-700 ease-out group-hover:scale-[1.04] group-hover:opacity-100"
           />
-        </button>
-
-        {/* Quick View */}
-        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0">
-          <span className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-black/70 text-white text-xs font-medium backdrop-blur-sm">
-            <Eye className="h-3.5 w-3.5" />
-            Shiko
-          </span>
-        </div>
-      </Link>
-
-      {/* Info Section */}
-      <div className="p-3.5">
-        {/* Category */}
-        {product.category && (
-          <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-1 truncate">
-            {product.category}
-          </p>
         )}
 
-        {/* Title */}
-        <Link href={`/products/${slug}`}>
-          <h3 className="text-sm font-semibold leading-snug mb-2 line-clamp-2 group-hover:text-primary transition-colors min-h-[40px]">
-            {product.title}
-          </h3>
-        </Link>
-
-        {/* Price */}
-        <div className="flex items-baseline gap-2 mb-3">
-          <span className="text-base font-bold text-foreground">
-            {displayPrice.toFixed(2)} &euro;
-          </span>
-          {hasDiscount && (
-            <span className="text-sm text-muted-foreground line-through">
-              {product.price.toFixed(2)} &euro;
+        <div className="absolute top-3 left-3 flex flex-col items-start gap-1.5">
+          {off > 0 && (
+            <span className="rounded-full bg-primary px-2.5 py-1 text-[11px] font-semibold text-primary-foreground tabular-nums">
+              −{off}%
             </span>
+          )}
+          {product.is_new && (
+            <span className="rounded-full bg-card px-2.5 py-1 text-[11px] font-semibold shadow-sm">E re</span>
+          )}
+          {outOfStock && (
+            <span className="rounded-full bg-ink px-2.5 py-1 text-[11px] font-semibold text-ink-foreground">Jo në stok</span>
           )}
         </div>
 
-        {/* Add to Cart */}
-        <button
-          onClick={handleAddToCart}
-          disabled={product.stock <= 0 || isAddingToCart}
-          className={cn(
-            "w-full h-9 rounded-lg text-xs font-bold uppercase tracking-wide transition-all flex items-center justify-center gap-1.5",
-            product.stock > 0
-              ? "bg-primary text-white hover:bg-primary/90 active:scale-[0.98]"
-              : "bg-muted text-muted-foreground cursor-not-allowed"
-          )}
-        >
-          <ShoppingCart className="h-3.5 w-3.5" />
-          {product.stock > 0
-            ? isAddingToCart
-              ? "Duke shtuar..."
-              : "Shto ne shporte"
-            : "Jo ne stok"}
-        </button>
+        {!outOfStock && (
+          <button
+            type="button"
+            onClick={handleAdd}
+            disabled={adding}
+            aria-label={`Shto ${product.title} në shportë`}
+            className="absolute right-3 bottom-3 flex h-10 items-center gap-1.5 rounded-full bg-ink pr-4 pl-3 text-xs font-semibold text-ink-foreground shadow-[var(--shadow-lift)] transition-all duration-300 hover:bg-primary focus-visible:translate-y-0 focus-visible:opacity-100 lg:translate-y-2 lg:opacity-0 lg:group-hover:translate-y-0 lg:group-hover:opacity-100 max-lg:w-10 max-lg:justify-center max-lg:p-0"
+          >
+            {adding ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
+            <span className="max-lg:sr-only">Shto</span>
+          </button>
+        )}
+      </Link>
+
+      <button
+        type="button"
+        onClick={handleWishlist}
+        aria-pressed={wishlisted}
+        aria-label={wishlisted ? "Hiq nga lista e dëshirave" : "Shto në listën e dëshirave"}
+        className="absolute top-3 right-3 grid size-9 place-items-center rounded-full bg-card/90 shadow-sm backdrop-blur transition-transform hover:scale-110"
+      >
+        <Heart className={cn("size-4 transition-colors", wishlisted ? "fill-primary text-primary" : "text-foreground/70")} />
+      </button>
+
+      <div className="flex flex-1 flex-col px-0.5 pt-3">
+        {product.brand && (
+          <p className="mb-0.5 truncate text-[11px] font-medium tracking-wide text-muted-foreground uppercase">{product.brand}</p>
+        )}
+        <Link href={href} className="line-clamp-2 text-sm leading-snug font-medium transition-colors hover:text-primary">
+          {product.title}
+        </Link>
+        <div className="mt-auto flex items-end justify-between gap-2 pt-2">
+          <Price product={product} />
+          {lowStock && <span className="text-[11px] font-medium text-warning-strong">Vetëm {product.stock} copë</span>}
+        </div>
       </div>
+    </article>
+  )
+}
+
+export function ProductCardSkeleton() {
+  return (
+    <div className="flex flex-col">
+      <div className="aspect-[4/5] animate-pulse rounded-2xl bg-muted" />
+      <div className="mt-3 h-3 w-1/3 animate-pulse rounded bg-muted" />
+      <div className="mt-2 h-4 w-4/5 animate-pulse rounded bg-muted" />
+      <div className="mt-3 h-4 w-1/4 animate-pulse rounded bg-muted" />
     </div>
+  )
+}
+
+export function ProductGrid({ children, className }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div className={cn("grid grid-cols-2 gap-x-3 gap-y-8 sm:grid-cols-3 sm:gap-x-5 lg:grid-cols-4", className)}>{children}</div>
   )
 }
