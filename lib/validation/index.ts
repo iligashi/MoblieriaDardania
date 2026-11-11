@@ -155,6 +155,7 @@ export const categorySchema = z.object({
     .trim()
     .max(2048)
     .nullish()
+    .refine((v) => !v || /^#[0-9a-f]{6}$/i.test(v) || /^https?:\/\//i.test(v), "Përdorni një ngjyrë #rrggbb ose një URL foto")
     .transform((v) => (v ? v : null)),
   description: nullableText(500),
   display_order: z.coerce.number().int().min(0).max(10_000).optional(),

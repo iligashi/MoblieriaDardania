@@ -6,7 +6,10 @@ import { ProductCard, ProductGrid } from "@/components/product-card"
 import { ShopFilters, ShopToolbar } from "@/components/shop-filters"
 import { Pagination } from "@/components/pagination"
 import { EmptyState } from "@/components/empty-state"
-import { categoryFilter, getActiveCategories } from "@/lib/catalog"
+import { CategoryRail } from "@/components/category-rail"
+import { CategoryVisual, catStyle, productCountLabel } from "@/components/category-card"
+import { categoryFilter, getCategoryOverview } from "@/lib/catalog"
+import { cn } from "@/lib/utils"
 import { sanitizeSearch } from "@/lib/validation"
 import type { Product } from "@/lib/types"
 
@@ -55,8 +58,8 @@ export default async function ShopPage({ searchParams }: { searchParams: Promise
   const supabase = await createClient()
   const page = Math.max(1, Math.floor(Number(params.page)) || 1)
 
-  const [categories, settingsResult] = await Promise.all([
-    getActiveCategories(supabase),
+  const [{ categories, roots, productTotal }, settingsResult] = await Promise.all([
+    getCategoryOverview(supabase),
     supabase.from("settings").select("key, value"),
   ])
 
@@ -108,6 +111,11 @@ export default async function ShopPage({ searchParams }: { searchParams: Promise
   const total = count ?? 0
   const totalPages = Math.ceil(total / PAGE_SIZE)
 
+  const summary = cat?.category
+    ? (roots.find((r) => r.id === cat.category!.id) ??
+      roots.flatMap((r) => r.children).find((c) => c.id === cat.category!.id) ??
+      null)
+    : null
   const parent = cat?.category?.parent_id ? categories.find((c) => c.id === cat.category!.parent_id) : null
   const title = titleFor(params, cat?.category?.name ?? null)
   const filterProps = { categories, colors: settings.colors ?? [], materials: settings.materials ?? [] }
@@ -115,29 +123,55 @@ export default async function ShopPage({ searchParams }: { searchParams: Promise
 
   return (
     <div className="container-page pt-8 lg:pt-12">
-      <header className="border-b pb-8">
-        <nav aria-label="Navigimi" className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <Link href="/" className="hover:text-foreground">
-            Ballina
-          </Link>
-          <ChevronRight className="size-3" />
-          <Link href="/shop" className="hover:text-foreground">
-            Dyqani
-          </Link>
-          {parent && (
-            <>
-              <ChevronRight className="size-3" />
-              <Link href={`/shop?category=${parent.slug}`} className="hover:text-foreground">
-                {parent.name}
-              </Link>
-            </>
-          )}
-        </nav>
-        <h1 className="mt-4 font-display text-5xl leading-none sm:text-6xl">{title}</h1>
-        {cat?.category?.description && (
-          <p className="mt-3 max-w-2xl text-muted-foreground">{cat.category.description}</p>
+      <header
+        style={summary ? catStyle(summary.color) : undefined}
+        className={cn(
+          summary &&
+            "relative overflow-hidden rounded-[2rem] bg-[color-mix(in_oklab,var(--cat)_10%,var(--card))] ring-1 ring-[color-mix(in_oklab,var(--cat)_20%,transparent)]",
         )}
+      >
+        <div className={cn("flex items-stretch gap-6", summary && "p-6 sm:p-10")}>
+          <div className="min-w-0 flex-1 py-1">
+            <nav aria-label="Navigimi" className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Link href="/" className="hover:text-foreground">
+                Ballina
+              </Link>
+              <ChevronRight className="size-3" />
+              <Link href="/shop" className="hover:text-foreground">
+                Dyqani
+              </Link>
+              {parent && (
+                <>
+                  <ChevronRight className="size-3" />
+                  <Link href={`/shop?category=${parent.slug}`} className="hover:text-foreground">
+                    {parent.name}
+                  </Link>
+                </>
+              )}
+            </nav>
+            <h1 className="mt-4 font-display text-5xl leading-none text-balance sm:text-6xl">{title}</h1>
+            {cat?.category?.description && (
+              <p className="mt-3 max-w-2xl text-muted-foreground">{cat.category.description}</p>
+            )}
+            <p className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
+              {summary && <span className="size-2 rounded-full bg-[var(--cat)]" />}
+              {productCountLabel(total)}
+            </p>
+          </div>
+          {summary && (summary.photo || summary.covers.length > 0) && (
+            <CategoryVisual
+              name={summary.name}
+              photo={summary.photo}
+              covers={summary.covers}
+              className="hidden w-80 shrink-0 overflow-hidden rounded-3xl !p-0 md:grid lg:w-96 [&>div]:rounded-xl"
+            />
+          )}
+        </div>
       </header>
+
+      <div className="mt-6 border-b pb-6">
+        <CategoryRail roots={roots} activeSlug={cat?.category ? cat.slug : null} params={params} allCount={productTotal} />
+      </div>
 
       <div className="grid gap-10 pt-8 lg:grid-cols-[240px_1fr]">
         <aside className="hidden lg:block">
@@ -166,13 +200,23 @@ export default async function ShopPage({ searchParams }: { searchParams: Promise
           ) : (
             <EmptyState
               className="mt-8"
-              title={hasFilters ? "Asnjë produkt nuk përputhet" : "Së shpejti produkte të reja"}
-              description={
-                hasFilters
-                  ? "Provoni të hiqni disa filtra ose kërkoni me një fjalë tjetër."
-                  : "Po përditësojmë katalogun. Kthehuni së shpejti!"
-              }
-              action={hasFilters ? { href: "/shop", label: "Pastro filtrat" } : { href: "/", label: "Kthehu në ballinë" }}
+              {...(summary && summary.productCount === 0
+                ? {
+                    title: `Së shpejti në ${summary.name}`,
+                    description: "Po e plotësojmë këtë kategori. Ndërkohë, shikoni produktet e tjera.",
+                    action: { href: "/shop", label: "Shiko të gjitha produktet" },
+                  }
+                : hasFilters
+                  ? {
+                      title: "Asnjë produkt nuk përputhet",
+                      description: "Provoni të hiqni disa filtra ose kërkoni me një fjalë tjetër.",
+                      action: { href: "/shop", label: "Pastro filtrat" },
+                    }
+                  : {
+                      title: "Së shpejti produkte të reja",
+                      description: "Po përditësojmë katalogun. Kthehuni së shpejti!",
+                      action: { href: "/", label: "Kthehu në ballinë" },
+                    })}
             />
           )}
         </div>

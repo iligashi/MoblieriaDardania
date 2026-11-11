@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { FilterTabs, Thumb } from "@/components/admin/admin-ui"
 import { SHOP, formatPrice, unitPrice } from "@/lib/shop-config"
+import { categoryKeys, productInCategory } from "@/lib/catalog"
 import { cn } from "@/lib/utils"
 import type { Category, Product } from "@/lib/types"
 
@@ -34,12 +35,20 @@ type Tab = "all" | "active" | "inactive" | "low" | "sale"
 type Sort = "newest" | "title" | "price_desc" | "stock_asc"
 const PAGE = 25
 
-export function ProductsTable({ initialProducts, categories }: { initialProducts: Product[]; categories: Category[] }) {
+export function ProductsTable({
+  initialProducts,
+  categories,
+  initialCategory = "all",
+}: {
+  initialProducts: Product[]
+  categories: Category[]
+  initialCategory?: string
+}) {
   const router = useRouter()
   const [products, setProducts] = useState(initialProducts)
   const [tab, setTab] = useState<Tab>("all")
   const [query, setQuery] = useState("")
-  const [category, setCategory] = useState("all")
+  const [category, setCategory] = useState(initialCategory)
   const [sort, setSort] = useState<Sort>("newest")
   const [limit, setLimit] = useState(PAGE)
   const [toDelete, setToDelete] = useState<Product | null>(null)
@@ -47,6 +56,10 @@ export function ProductsTable({ initialProducts, categories }: { initialProducts
   useEffect(() => setProducts(initialProducts), [initialProducts])
   useEffect(() => setLimit(PAGE), [tab, query, category, sort])
 
+  const allKeys = useMemo(
+    () => ({ ids: new Set(categories.map((c) => c.id)), slugs: new Set(categories.map((c) => c.slug)) }),
+    [categories],
+  )
   const catName = useMemo(() => new Map(categories.map((c) => [c.id, c.name])), [categories])
 
   const inTab = (p: Product, t: Tab) =>
@@ -60,9 +73,11 @@ export function ProductsTable({ initialProducts, categories }: { initialProducts
     const q = query.trim().toLowerCase()
     const list = products.filter((p) => {
       if (!inTab(p, tab)) return false
-      if (category !== "all") {
-        const childIds = categories.filter((c) => c.parent_id === category).map((c) => c.id)
-        if (p.category_id !== category && !childIds.includes(p.category_id ?? "")) return false
+      if (category === "none") {
+        if (productInCategory(p, allKeys)) return false
+      } else if (category !== "all") {
+        const selected = categories.find((c) => c.id === category)
+        if (selected && !productInCategory(p, categoryKeys(selected, categories))) return false
       }
       if (!q) return true
       return [p.title, p.sku, p.brand].some((v) => v?.toLowerCase().includes(q))
@@ -140,6 +155,7 @@ export function ProductsTable({ initialProducts, categories }: { initialProducts
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Të gjitha kategoritë</SelectItem>
+              <SelectItem value="none">Pa kategori</SelectItem>
               {roots.map((c) => (
                 <SelectItem key={c.id} value={c.id}>
                   {c.name}
