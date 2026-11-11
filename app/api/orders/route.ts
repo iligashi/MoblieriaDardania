@@ -4,6 +4,7 @@ import { createServiceRoleClient } from "@/lib/supabase/service-role"
 import { isAdminUser } from "@/lib/auth/admin"
 import { checkoutSchema, parseJson } from "@/lib/validation"
 import { round2, shippingFor, unitPrice } from "@/lib/shop-config"
+import { rateLimit } from "@/lib/rate-limit"
 
 export async function GET() {
   try {
@@ -45,14 +46,47 @@ async function nextOrderNumber(service: ReturnType<typeof createServiceRoleClien
   return `ORD-${today}-${suffix}`
 }
 
+type Service = ReturnType<typeof createServiceRoleClient>
+type Reservation = { product_id: string; quantity: number }
+
+/** Gives reserved stock back (order failed after stock was taken). Best effort, logged on failure. */
+async function releaseStock(service: Service, reserved: Reservation[]) {
+  for (const r of reserved) {
+    const { error } = await service.rpc("restore_stock", { p_product_id: r.product_id, p_quantity: r.quantity })
+    if (!error) continue
+    // restore_stock not installed yet (scripts/009): read-modify-write fallback.
+    const { data } = await service.from("products").select("stock").eq("id", r.product_id).maybeSingle()
+    if (data) {
+      const { error: fallbackError } = await service
+        .from("products")
+        .update({ stock: Number(data.stock) + r.quantity })
+        .eq("id", r.product_id)
+      if (fallbackError) console.error("[orders] could not release stock:", r.product_id, fallbackError.message)
+    }
+  }
+}
+
+function outOfStock(title: string, stock: number) {
+  return stock > 0 ? `“${title}” ka vetëm ${stock} copë në stok.` : `“${title}” nuk është më në stok.`
+}
+
 export async function POST(request: Request) {
+  const limited = await rateLimit(request, "checkout")
+  if (limited) return limited
+
   const parsed = await parseJson(request, checkoutSchema)
   if ("error" in parsed) return parsed.error
   const input = parsed.data
 
-  try {
-    const service = createServiceRoleClient()
+  // A bot filled the hidden honeypot field.
+  if (input.website) {
+    return NextResponse.json({ error: "Porosia nuk u pranua." }, { status: 400 })
+  }
 
+  const service = createServiceRoleClient()
+  const reserved: Reservation[] = []
+
+  try {
     // Merge duplicate lines so a product cannot be ordered twice to dodge stock checks.
     const quantities = new Map<string, number>()
     for (const item of input.items) {
@@ -74,20 +108,12 @@ export async function POST(request: Request) {
       const product = byId.get(productId)
       if (!product || product.is_active === false) {
         return NextResponse.json(
-          { error: "Nje nga produktet nuk eshte me ne dispozicion. Ju lutem rifreskoni shporten." },
+          { error: "Një nga produktet nuk është më në dispozicion. Ju lutem rifreskoni shportën." },
           { status: 409 },
         )
       }
       if (Number(product.stock) < quantity) {
-        return NextResponse.json(
-          {
-            error:
-              Number(product.stock) > 0
-                ? `"${product.title}" ka vetem ${product.stock} cope ne stok.`
-                : `"${product.title}" nuk eshte me ne stok.`,
-          },
-          { status: 409 },
-        )
+        return NextResponse.json({ error: outOfStock(product.title as string, Number(product.stock)) }, { status: 409 })
       }
       const price = unitPrice({ price: Number(product.price), discount_price: product.discount_price })
       lines.push({
@@ -98,6 +124,19 @@ export async function POST(request: Request) {
         quantity,
         subtotal: round2(price * quantity),
       })
+    }
+
+    // Reserve stock first. decrement_stock is atomic and refuses to go below zero,
+    // so two shoppers buying the last item at the same moment can't both succeed.
+    for (const line of lines) {
+      const { error } = await service.rpc("decrement_stock", { p_product_id: line.product_id, p_quantity: line.quantity })
+      if (error) {
+        await releaseStock(service, reserved)
+        reserved.length = 0
+        const { data: fresh } = await service.from("products").select("stock").eq("id", line.product_id).maybeSingle()
+        return NextResponse.json({ error: outOfStock(line.product_title, Number(fresh?.stock ?? 0)) }, { status: 409 })
+      }
+      reserved.push({ product_id: line.product_id, quantity: line.quantity })
     }
 
     const subtotal = round2(lines.reduce((sum, l) => sum + l.subtotal, 0))
@@ -132,8 +171,7 @@ export async function POST(request: Request) {
         notes: input.notes,
         send_via_whatsapp: false,
         status: "pending",
-        // Legacy columns kept for older dashboard rows. furniture_id stays NULL on purpose:
-        // its foreign key used ON DELETE CASCADE, so deleting a product used to delete orders.
+        // Legacy columns kept for older dashboard rows.
         furniture_id: null,
         furniture_title: lines.length > 1 ? `${lines[0].product_title} +${lines.length - 1}` : lines[0].product_title,
         furniture_price: total,
@@ -152,24 +190,7 @@ export async function POST(request: Request) {
       await service.from("orders").delete().eq("id", order.id)
       throw itemsError
     }
-
-    // Decrement stock atomically. `decrement_stock` only succeeds when enough stock is left.
-    for (const line of lines) {
-      const { error: rpcError } = await service.rpc("decrement_stock", {
-        p_product_id: line.product_id,
-        p_quantity: line.quantity,
-      })
-      if (rpcError) {
-        // Function not installed yet: conditional update that cannot go below zero.
-        const product = byId.get(line.product_id)!
-        const { error: fallbackError } = await service
-          .from("products")
-          .update({ stock: Math.max(0, Number(product.stock) - line.quantity) })
-          .eq("id", line.product_id)
-          .gte("stock", line.quantity)
-        if (fallbackError) console.error("[orders] stock update failed:", line.product_id, fallbackError.message)
-      }
-    }
+    reserved.length = 0 // the order now owns the reserved stock
 
     // Clear the server-side cart that produced this order.
     if (customerId) {
@@ -181,7 +202,8 @@ export async function POST(request: Request) {
       { status: 201 },
     )
   } catch (error) {
+    if (reserved.length) await releaseStock(service, reserved)
     console.error("[orders] create failed:", error)
-    return NextResponse.json({ error: "Gabim ne krijimin e porosise. Ju lutem provoni perseri." }, { status: 500 })
+    return NextResponse.json({ error: "Gabim në krijimin e porosisë. Ju lutem provoni përsëri." }, { status: 500 })
   }
 }
