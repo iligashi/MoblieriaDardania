@@ -1,65 +1,94 @@
+import type { Metadata } from "next"
+import Link from "next/link"
+import { ChevronRight } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
-import { ProductCard } from "@/components/product-card"
-import { ShopFilters } from "@/components/shop-filters"
+import { ProductCard, ProductGrid } from "@/components/product-card"
+import { ShopFilters, ShopToolbar } from "@/components/shop-filters"
 import { Pagination } from "@/components/pagination"
 import { EmptyState } from "@/components/empty-state"
-import type { Metadata } from "next"
+import { categoryFilter, getActiveCategories } from "@/lib/catalog"
+import { sanitizeSearch } from "@/lib/validation"
+import type { Product } from "@/lib/types"
 
-export const metadata: Metadata = {
-  title: "Dyqani",
+const PAGE_SIZE = 16
+
+type ShopParams = {
+  category?: string
+  search?: string
+  minPrice?: string
+  maxPrice?: string
+  color?: string
+  material?: string
+  brand?: string
+  sort?: string
+  page?: string
+  on_sale?: string
+  new?: string
+  bestseller?: string
+  in_stock?: string
 }
 
-const ITEMS_PER_PAGE = 16
+function titleFor(params: ShopParams, categoryName: string | null) {
+  if (params.search) return `Rezultatet për “${sanitizeSearch(params.search)}”`
+  if (categoryName) return categoryName
+  if (params.on_sale === "true") return "Zbritje"
+  if (params.new === "true") return "Të rejat"
+  if (params.bestseller === "true") return "Më të shiturat"
+  return "Të gjitha produktet"
+}
 
-export default async function ShopPage({
-  searchParams,
-}: {
-  searchParams: Promise<{
-    category?: string
-    search?: string
-    minPrice?: string
-    maxPrice?: string
-    color?: string
-    material?: string
-    brand?: string
-    sort?: string
-    page?: string
-    on_sale?: string
-    new?: string
-    bestseller?: string
-    in_stock?: string
-  }>
-}) {
+export async function generateMetadata({ searchParams }: { searchParams: Promise<ShopParams> }): Promise<Metadata> {
+  const params = await searchParams
+  return {
+    title: titleFor(params, null) === "Të gjitha produktet" ? "Dyqani" : titleFor(params, null),
+    alternates: { canonical: "/shop" },
+  }
+}
+
+const num = (v?: string) => {
+  const n = Number(v)
+  return v && Number.isFinite(n) && n >= 0 ? n : null
+}
+
+export default async function ShopPage({ searchParams }: { searchParams: Promise<ShopParams> }) {
   const params = await searchParams
   const supabase = await createClient()
-  const currentPage = Number(params.page) || 1
+  const page = Math.max(1, Math.floor(Number(params.page)) || 1)
 
-  let query = supabase
-    .from("products")
-    .select("*", { count: "exact" })
-    .eq("is_active", true)
+  const [categories, settingsResult] = await Promise.all([
+    getActiveCategories(supabase),
+    supabase.from("settings").select("key, value"),
+  ])
 
-  // Apply filters
-  if (params.search) {
-    query = query.or(`title.ilike.%${params.search}%,description.ilike.%${params.search}%,brand.ilike.%${params.search}%`)
+  const settings: Record<string, string[]> = {}
+  for (const row of settingsResult.data ?? []) {
+    if (Array.isArray(row.value)) settings[row.key] = row.value as string[]
   }
-  if (params.category) {
-    // Try matching by slug from categories table or legacy text field
-    query = query.or(`category.eq.${params.category},category.ilike.${params.category}`)
+
+  let query = supabase.from("products").select("*", { count: "exact" }).eq("is_active", true)
+
+  const search = sanitizeSearch(params.search)
+  if (search) {
+    const term = `*${search}*`
+    query = query.or(`title.ilike.${term},description.ilike.${term},brand.ilike.${term},sku.ilike.${term}`)
   }
-  if (params.minPrice) query = query.gte("price", Number(params.minPrice))
-  if (params.maxPrice) query = query.lte("price", Number(params.maxPrice))
-  if (params.color) query = query.eq("color", params.color)
-  if (params.material) query = query.eq("material", params.material)
-  if (params.brand) query = query.eq("brand", params.brand)
+
+  const cat = categoryFilter(params.category, categories)
+  if (cat) query = query.or(cat.filter)
+
+  const minPrice = num(params.minPrice)
+  const maxPrice = num(params.maxPrice)
+  if (minPrice != null) query = query.gte("price", minPrice)
+  if (maxPrice != null) query = query.lte("price", maxPrice)
+  if (params.color) query = query.eq("color", params.color.slice(0, 60))
+  if (params.material) query = query.eq("material", params.material.slice(0, 60))
+  if (params.brand) query = query.eq("brand", params.brand.slice(0, 60))
   if (params.on_sale === "true") query = query.not("discount_price", "is", null)
   if (params.new === "true") query = query.eq("is_new", true)
   if (params.bestseller === "true") query = query.eq("is_bestseller", true)
   if (params.in_stock === "true") query = query.gt("stock", 0)
 
-  // Sorting
-  const sort = params.sort || "newest"
-  switch (sort) {
+  switch (params.sort) {
     case "price_asc":
       query = query.order("price", { ascending: true })
       break
@@ -73,124 +102,81 @@ export default async function ShopPage({
       query = query.order("created_at", { ascending: false })
   }
 
-  // Pagination
-  const from = (currentPage - 1) * ITEMS_PER_PAGE
-  const to = from + ITEMS_PER_PAGE - 1
-  query = query.range(from, to)
+  const from = (page - 1) * PAGE_SIZE
+  const { data, count } = await query.range(from, from + PAGE_SIZE - 1)
+  const products = (data as Product[]) ?? []
+  const total = count ?? 0
+  const totalPages = Math.ceil(total / PAGE_SIZE)
 
-  const { data: products, count } = await query
-
-  const totalItems = count || 0
-  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE)
-
-  // Fetch categories for filter sidebar
-  const { data: categories } = await supabase
-    .from("categories")
-    .select("*")
-    .eq("is_active", true)
-    .order("display_order")
-
-  // Fetch settings for colors/materials
-  const { data: settings } = await supabase
-    .from("settings")
-    .select("*")
-
-  const settingsMap: Record<string, string[]> = {}
-  settings?.forEach((s) => {
-    settingsMap[s.key] = s.value
-  })
-
-  const hasActiveFilters = !!(
-    params.search || params.category || params.minPrice || params.maxPrice ||
-    params.color || params.material || params.brand || params.on_sale ||
-    params.new || params.bestseller || params.in_stock
-  )
+  const parent = cat?.category?.parent_id ? categories.find((c) => c.id === cat.category!.parent_id) : null
+  const title = titleFor(params, cat?.category?.name ?? null)
+  const filterProps = { categories, colors: settings.colors ?? [], materials: settings.materials ?? [] }
+  const hasFilters = Object.entries(params).some(([k, v]) => v && k !== "sort" && k !== "page")
 
   return (
-    <div className="bg-[#f8f9fa] min-h-screen">
-      <div className="container mx-auto px-4 py-6">
-        {/* Page Header */}
-        <div className="mb-6">
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
-            {params.search
-              ? `Rezultatet per "${params.search}"`
-              : params.on_sale === "true"
-                ? "Zbritje"
-                : params.new === "true"
-                  ? "Produkte te reja"
-                  : params.category
-                    ? params.category.charAt(0).toUpperCase() + params.category.slice(1)
-                    : "Dyqani"}
-          </h1>
-          {totalItems > 0 && (
-            <p className="text-sm text-muted-foreground mt-1">
-              Po shfaqet {from + 1}-{Math.min(to + 1, totalItems)} nga {totalItems} produkte
-            </p>
+    <div className="container-page pt-8 lg:pt-12">
+      <header className="border-b pb-8">
+        <nav aria-label="Navigimi" className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Link href="/" className="hover:text-foreground">
+            Ballina
+          </Link>
+          <ChevronRight className="size-3" />
+          <Link href="/shop" className="hover:text-foreground">
+            Dyqani
+          </Link>
+          {parent && (
+            <>
+              <ChevronRight className="size-3" />
+              <Link href={`/shop?category=${parent.slug}`} className="hover:text-foreground">
+                {parent.name}
+              </Link>
+            </>
           )}
-        </div>
+        </nav>
+        <h1 className="mt-4 font-display text-5xl leading-none sm:text-6xl">{title}</h1>
+        {cat?.category?.description && (
+          <p className="mt-3 max-w-2xl text-muted-foreground">{cat.category.description}</p>
+        )}
+      </header>
 
-        <div className="grid lg:grid-cols-[260px_1fr] gap-6">
-          {/* Sidebar Filters */}
-          <aside className="hidden lg:block">
-            <div className="sticky top-24 bg-white rounded-xl border border-border/50 p-5">
-              <ShopFilters
-                categories={categories || []}
-                colors={settingsMap.colors || []}
-                materials={settingsMap.materials || []}
-              />
-            </div>
-          </aside>
-
-          {/* Products Grid */}
-          <div>
-            {/* Sort Bar */}
-            <div className="flex items-center justify-between mb-4 bg-white rounded-lg border border-border/50 px-4 py-3">
-              <span className="text-sm text-muted-foreground">
-                {totalItems} produkte
-              </span>
-              <ShopSortSelect />
-            </div>
-
-            {products && products.length > 0 ? (
-              <>
-                <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
-                  {products.map((product) => (
-                    <ProductCard key={product.id} product={product} />
-                  ))}
-                </div>
-
-                {totalPages > 1 && (
-                  <div className="mt-8">
-                    <Pagination
-                      currentPage={currentPage}
-                      totalPages={totalPages}
-                      totalItems={totalItems}
-                      itemsPerPage={ITEMS_PER_PAGE}
-                      basePath="/shop"
-                    />
-                  </div>
-                )}
-              </>
-            ) : (
-              <EmptyState
-                type={hasActiveFilters ? "filtered" : "no-items"}
-              />
-            )}
+      <div className="grid gap-10 pt-8 lg:grid-cols-[240px_1fr]">
+        <aside className="hidden lg:block">
+          <div className="sticky top-28 max-h-[calc(100dvh-8rem)] overflow-y-auto pr-2 scrollbar-none">
+            <ShopFilters {...filterProps} />
           </div>
+        </aside>
+
+        <div className="min-w-0">
+          <ShopToolbar total={total} {...filterProps} />
+
+          {products.length > 0 ? (
+            <>
+              <ProductGrid className="mt-8 lg:grid-cols-3 xl:grid-cols-4">
+                {products.map((p, i) => (
+                  <ProductCard key={p.id} product={p} priority={i < 4} />
+                ))}
+              </ProductGrid>
+              <div className="mt-14 flex flex-col items-center gap-3">
+                <Pagination currentPage={page} totalPages={totalPages} basePath="/shop" searchParams={params} />
+                <p className="text-xs text-muted-foreground tabular-nums">
+                  {from + 1}–{Math.min(from + PAGE_SIZE, total)} nga {total} produkte
+                </p>
+              </div>
+            </>
+          ) : (
+            <EmptyState
+              className="mt-8"
+              title={hasFilters ? "Asnjë produkt nuk përputhet" : "Së shpejti produkte të reja"}
+              description={
+                hasFilters
+                  ? "Provoni të hiqni disa filtra ose kërkoni me një fjalë tjetër."
+                  : "Po përditësojmë katalogun. Kthehuni së shpejti!"
+              }
+              action={hasFilters ? { href: "/shop", label: "Pastro filtrat" } : { href: "/", label: "Kthehu në ballinë" }}
+            />
+          )}
         </div>
       </div>
     </div>
   )
 }
-
-function ShopSortSelect() {
-  return (
-    <div className="flex items-center gap-2">
-      <label className="text-sm text-muted-foreground hidden sm:inline">Rendit:</label>
-      <SortSelectClient />
-    </div>
-  )
-}
-
-// Client component for the sort select
-import { SortSelectClient } from "@/components/sort-select-client"

@@ -1,163 +1,156 @@
 "use client"
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { ChevronLeft, ChevronRight, X, ZoomIn } from "lucide-react"
+import { useCallback, useEffect, useRef, useState } from "react"
+import * as DialogPrimitive from "@radix-ui/react-dialog"
+import { ChevronLeft, ChevronRight, Expand, X } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { Dialog, DialogContent } from "@/components/ui/dialog"
 
-interface ImageCarouselProps {
-  images: string[]
-  title: string
-}
+export function ImageCarousel({ images, title }: { images: string[]; title: string }) {
+  const list = images.filter(Boolean).length ? images.filter(Boolean) : ["/placeholder.svg"]
+  const [index, setIndex] = useState(0)
+  const [zoomOpen, setZoomOpen] = useState(false)
+  const touchX = useRef<number | null>(null)
+  const many = list.length > 1
 
-export function ImageCarousel({ images, title }: ImageCarouselProps) {
-  const [currentIndex, setCurrentIndex] = useState(0)
-  const [isLightboxOpen, setIsLightboxOpen] = useState(false)
+  const go = useCallback((dir: 1 | -1) => setIndex((i) => (i + dir + list.length) % list.length), [list.length])
 
-  const hasImages = images.length > 0
-  const displayImages = hasImages ? images : ["/placeholder.svg?height=600&width=600"]
+  useEffect(() => {
+    if (!zoomOpen) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "ArrowLeft") go(-1)
+      if (e.key === "ArrowRight") go(1)
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [zoomOpen, go])
 
-  const goToPrevious = () => {
-    setCurrentIndex((prev) => (prev === 0 ? displayImages.length - 1 : prev - 1))
-  }
-
-  const goToNext = () => {
-    setCurrentIndex((prev) => (prev === displayImages.length - 1 ? 0 : prev + 1))
-  }
-
-  const goToImage = (index: number) => {
-    setCurrentIndex(index)
+  const swipe = {
+    onTouchStart: (e: React.TouchEvent) => (touchX.current = e.touches[0].clientX),
+    onTouchEnd: (e: React.TouchEvent) => {
+      if (touchX.current == null) return
+      const dx = e.changedTouches[0].clientX - touchX.current
+      if (Math.abs(dx) > 40) go(dx < 0 ? 1 : -1)
+      touchX.current = null
+    },
   }
 
   return (
-    <>
-      <div className="space-y-4">
-        {/* Main Image */}
-        <div className="group relative aspect-square overflow-hidden rounded-2xl bg-gradient-to-br from-secondary/50 to-background p-1 shadow-xl">
-          <div className="relative h-full w-full overflow-hidden rounded-xl bg-card">
-            <img
-              src={displayImages[currentIndex] || "/placeholder.svg"}
-              alt={`${title} - Image ${currentIndex + 1}`}
-              className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105"
-            />
-
-            <Button
-              variant="secondary"
-              size="icon"
-              className="absolute right-2 sm:right-4 top-2 sm:top-4 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shadow-lg touch-manipulation min-h-[44px] min-w-[44px] z-30 border border-border/50"
-              onClick={() => setIsLightboxOpen(true)}
-              aria-label="Zoom image"
+    <div className="flex flex-col-reverse gap-3 sm:flex-row sm:gap-4">
+      {many && (
+        <div className="flex gap-2.5 overflow-x-auto scrollbar-none sm:max-h-[640px] sm:w-20 sm:flex-col sm:overflow-y-auto">
+          {list.map((src, i) => (
+            <button
+              key={src + i}
+              type="button"
+              onClick={() => setIndex(i)}
+              aria-label={`Fotoja ${i + 1}`}
+              aria-current={i === index}
+              className={cn(
+                "relative aspect-square w-16 shrink-0 overflow-hidden rounded-xl bg-muted/70 ring-1 transition-all sm:w-20",
+                i === index ? "ring-2 ring-foreground" : "ring-border opacity-70 hover:opacity-100",
+              )}
             >
-              <ZoomIn className="h-4 w-4 sm:h-5 sm:w-5" />
-            </Button>
-
-            {/* Navigation Arrows */}
-            {displayImages.length > 1 && (
-              <>
-                <Button
-                  variant="secondary"
-                  size="icon"
-                  className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 bg-background/90 backdrop-blur-sm shadow-lg hover:bg-primary hover:text-primary-foreground active:bg-primary active:text-primary-foreground transition-all touch-manipulation min-h-[44px] min-w-[44px] z-20"
-                  onClick={goToPrevious}
-                  aria-label="Previous image"
-                >
-                  <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5" />
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="icon"
-                  className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 bg-background/90 backdrop-blur-sm shadow-lg hover:bg-primary hover:text-primary-foreground active:bg-primary active:text-primary-foreground transition-all touch-manipulation min-h-[44px] min-w-[44px] z-20"
-                  onClick={goToNext}
-                  aria-label="Next image"
-                >
-                  <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5" />
-                </Button>
-              </>
-            )}
-
-            {/* Image Counter */}
-            {displayImages.length > 1 && (
-              <div className="absolute bottom-4 right-4 rounded-full bg-primary/90 px-4 py-2 text-sm font-medium text-primary-foreground backdrop-blur-sm shadow-lg">
-                {currentIndex + 1} / {displayImages.length}
-              </div>
-            )}
-          </div>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={src} alt="" className="size-full object-contain p-1.5 mix-blend-multiply" loading="lazy" />
+            </button>
+          ))}
         </div>
+      )}
 
-        {/* Thumbnail Navigation */}
-        {displayImages.length > 1 && (
-          <div className="grid grid-cols-4 gap-2 sm:gap-3 sm:grid-cols-5 lg:grid-cols-4">
-            {displayImages.map((image, index) => (
-              <button
-                key={index}
-                onClick={() => goToImage(index)}
-                className={cn(
-                  "relative aspect-square overflow-hidden rounded-lg sm:rounded-xl border-2 transition-all hover:scale-105 active:scale-105 touch-manipulation min-h-[44px]",
-                  currentIndex === index
-                    ? "border-primary shadow-lg shadow-primary/20 ring-2 ring-primary/20"
-                    : "border-border hover:border-primary/50 active:border-primary/50",
-                )}
-              >
-                <img
-                  src={image || "/placeholder.svg"}
-                  alt={`${title} - Thumbnail ${index + 1}`}
-                  className="h-full w-full object-cover"
+      <div
+        className="group relative aspect-square flex-1 overflow-hidden rounded-[1.75rem] bg-muted/70 ring-1 ring-border/60 ring-inset"
+        {...swipe}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          key={list[index]}
+          src={list[index]}
+          alt={`${title} — fotoja ${index + 1}`}
+          className="absolute inset-0 size-full animate-in object-contain p-8 mix-blend-multiply duration-300 fade-in-0 sm:p-12"
+        />
+        <button
+          type="button"
+          onClick={() => setZoomOpen(true)}
+          aria-label="Zmadho foton"
+          className="absolute top-4 right-4 grid size-10 place-items-center rounded-full bg-card/90 shadow-sm backdrop-blur transition-opacity hover:bg-card sm:opacity-0 sm:group-hover:opacity-100"
+        >
+          <Expand className="size-4" />
+        </button>
+        {many && (
+          <>
+            <GalleryArrow side="left" onClick={() => go(-1)} />
+            <GalleryArrow side="right" onClick={() => go(1)} />
+            <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-1.5">
+              {list.map((_, i) => (
+                <span
+                  key={i}
+                  className={cn("h-1.5 rounded-full transition-all", i === index ? "w-5 bg-foreground" : "w-1.5 bg-foreground/25")}
                 />
-              </button>
-            ))}
-          </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
 
-      <Dialog open={isLightboxOpen} onOpenChange={setIsLightboxOpen}>
-        <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 bg-black/95 border-0">
-          <div className="relative h-[95vh] w-full">
-            <img
-              src={displayImages[currentIndex] || "/placeholder.svg"}
-              alt={`${title} - Image ${currentIndex + 1}`}
-              className="h-full w-full object-contain"
-            />
-
-            {/* Close Button */}
-            <Button
-              variant="secondary"
-              size="icon"
-              className="absolute right-4 top-4 bg-background/90 backdrop-blur-sm shadow-lg"
-              onClick={() => setIsLightboxOpen(false)}
+      <DialogPrimitive.Root open={zoomOpen} onOpenChange={setZoomOpen}>
+        <DialogPrimitive.Portal>
+          <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-ink/95 data-[state=open]:animate-in data-[state=open]:fade-in-0" />
+          <DialogPrimitive.Content
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 outline-none sm:p-10"
+            {...swipe}
+          >
+            <DialogPrimitive.Title className="sr-only">{title}</DialogPrimitive.Title>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={list[index]} alt={title} className="max-h-full max-w-full rounded-2xl bg-white object-contain" />
+            <DialogPrimitive.Close
+              className="absolute top-4 right-4 grid size-11 place-items-center rounded-full bg-white/10 text-white hover:bg-white/20"
+              aria-label="Mbyll"
             >
-              <X className="h-5 w-5" />
-            </Button>
-
-            {/* Navigation in Lightbox */}
-            {displayImages.length > 1 && (
+              <X className="size-5" />
+            </DialogPrimitive.Close>
+            {many && (
               <>
-                <Button
-                  variant="secondary"
-                  size="icon"
-                  className="absolute left-4 top-1/2 -translate-y-1/2 bg-background/90 backdrop-blur-sm shadow-lg"
-                  onClick={goToPrevious}
+                <button
+                  type="button"
+                  onClick={() => go(-1)}
+                  aria-label="Fotoja e mëparshme"
+                  className="absolute left-4 grid size-11 place-items-center rounded-full bg-white/10 text-white hover:bg-white/20"
                 >
-                  <ChevronLeft className="h-5 w-5" />
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="icon"
-                  className="absolute right-4 top-1/2 -translate-y-1/2 bg-background/90 backdrop-blur-sm shadow-lg"
-                  onClick={goToNext}
+                  <ChevronLeft className="size-5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => go(1)}
+                  aria-label="Fotoja tjetër"
+                  className="absolute right-4 grid size-11 place-items-center rounded-full bg-white/10 text-white hover:bg-white/20"
                 >
-                  <ChevronRight className="h-5 w-5" />
-                </Button>
-
-                {/* Counter in Lightbox */}
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-background/90 px-4 py-2 text-sm font-medium backdrop-blur-sm shadow-lg">
-                  {currentIndex + 1} / {displayImages.length}
-                </div>
+                  <ChevronRight className="size-5" />
+                </button>
+                <p className="absolute bottom-5 left-1/2 -translate-x-1/2 text-sm text-white/70 tabular-nums">
+                  {index + 1} / {list.length}
+                </p>
               </>
             )}
-          </div>
-        </DialogContent>
-      </Dialog>
-    </>
+          </DialogPrimitive.Content>
+        </DialogPrimitive.Portal>
+      </DialogPrimitive.Root>
+    </div>
+  )
+}
+
+function GalleryArrow({ side, onClick }: { side: "left" | "right"; onClick: () => void }) {
+  const Icon = side === "left" ? ChevronLeft : ChevronRight
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={side === "left" ? "Fotoja e mëparshme" : "Fotoja tjetër"}
+      className={cn(
+        "absolute top-1/2 grid size-10 -translate-y-1/2 place-items-center rounded-full bg-card/90 shadow-sm backdrop-blur transition-opacity hover:bg-card sm:opacity-0 sm:group-hover:opacity-100",
+        side === "left" ? "left-4" : "right-4",
+      )}
+    >
+      <Icon className="size-4" />
+    </button>
   )
 }

@@ -276,7 +276,7 @@ export function CustomFieldsDisplay({ fields, values = {} }: { fields: CustomFie
               <p className="text-sm font-medium text-muted-foreground mb-2">{field.fieldLabel}</p>
               <p className="text-base font-semibold text-foreground">
                 {field.fieldType === 'boolean' 
-                  ? value ? 'Yes' : 'No'
+                  ? value ? 'Po' : 'Jo'
                   : field.fieldType === 'image' && value
                   ? (
                     <img

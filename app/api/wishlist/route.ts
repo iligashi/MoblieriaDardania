@@ -1,66 +1,67 @@
+import { NextResponse } from "next/server"
+import { z } from "zod"
 import { createClient } from "@/lib/supabase/server"
 import { createServiceRoleClient } from "@/lib/supabase/service-role"
-import { NextResponse } from "next/server"
+import { parseJson, UUID_RE } from "@/lib/validation"
 
 export async function GET() {
   try {
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
     if (!user) return NextResponse.json([])
 
-    // Use service role to bypass RLS
-    const supabaseAdmin = createServiceRoleClient()
-    const { data, error } = await supabaseAdmin
+    const service = createServiceRoleClient()
+    const { data, error } = await service
       .from("wishlist_items")
       .select("*, product:products(*)")
       .eq("customer_id", user.id)
       .order("created_at", { ascending: false })
 
     if (error) throw error
-    return NextResponse.json(data || [])
+    return NextResponse.json((data || []).filter((i) => i.product && i.product.is_active !== false))
   } catch (error) {
-    console.error("Error fetching wishlist:", error)
+    console.error("[wishlist] fetch failed:", error)
     return NextResponse.json({ error: "Failed to fetch wishlist" }, { status: 500 })
   }
 }
 
+const addSchema = z.object({ product_id: z.string().regex(UUID_RE) })
+
 export async function POST(request: Request) {
+  const parsed = await parseJson(request, addSchema)
+  if ("error" in parsed) return parsed.error
+
   try {
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
     if (!user) {
       return NextResponse.json({ error: "Duhet te jeni te kyqur per te perdorur listen e deshirave" }, { status: 401 })
     }
 
-    const { product_id } = await request.json()
-
-    // Use service role to bypass RLS
-    const supabaseAdmin = createServiceRoleClient()
-
-    // Check if already in wishlist
-    const { data: existing } = await supabaseAdmin
+    const service = createServiceRoleClient()
+    const { data, error } = await service
       .from("wishlist_items")
-      .select("id")
-      .eq("customer_id", user.id)
-      .eq("product_id", product_id)
-      .single()
-
-    if (existing) {
-      return NextResponse.json({ message: "Already in wishlist" }, { status: 200 })
-    }
-
-    const { data, error } = await supabaseAdmin
-      .from("wishlist_items")
-      .insert([{ customer_id: user.id, product_id }])
+      .upsert(
+        { customer_id: user.id, product_id: parsed.data.product_id },
+        { onConflict: "customer_id,product_id", ignoreDuplicates: false },
+      )
       .select("*, product:products(*)")
       .single()
 
-    if (error) throw error
+    if (error) {
+      // 23503: the customer row is missing (e.g. account created before the fix) or product was deleted.
+      if (error.code === "23503") {
+        return NextResponse.json({ error: "Produkti nuk mund te shtohet" }, { status: 409 })
+      }
+      throw error
+    }
     return NextResponse.json(data, { status: 201 })
   } catch (error) {
-    console.error("Error adding to wishlist:", error)
+    console.error("[wishlist] add failed:", error)
     return NextResponse.json({ error: "Failed to add to wishlist" }, { status: 500 })
   }
 }

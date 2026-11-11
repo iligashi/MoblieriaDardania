@@ -1,33 +1,25 @@
-"use client"
-
 import type { Product } from "@/lib/types"
-import { MessageCircle } from "lucide-react"
-
-const whatsappNumber = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER
+import { Button } from "@/components/ui/button"
+import { WhatsAppIcon } from "@/components/icons"
+import { SITE_URL } from "@/lib/site"
+import { formatPrice, unitPrice, whatsappLink } from "@/lib/shop-config"
 
 export function WhatsAppButton({ product }: { product: Product }) {
-  const handleClick = () => {
-    if (!whatsappNumber) return
-    const price = product.discount_price ?? product.price
-    const message = [
-      `Pershendetje, jam i/e interesuar per "${product.title}"`,
-      `Cmimi: ${price.toFixed(2)} EUR`,
-      product.sku ? `SKU: ${product.sku}` : null,
-    ].filter(Boolean).join("\n")
-
-    const cleanNumber = whatsappNumber.replace(/[^+\d]/g, "")
-    window.open(`https://wa.me/${cleanNumber}?text=${encodeURIComponent(message)}`, "_blank")
-  }
-
-  if (!whatsappNumber) return null
+  const message = [
+    `Përshëndetje, jam i/e interesuar për "${product.title}".`,
+    `Çmimi: ${formatPrice(unitPrice(product))}`,
+    product.sku ? `SKU: ${product.sku}` : null,
+    `${SITE_URL}/products/${product.slug || product.id}`,
+  ]
+    .filter(Boolean)
+    .join("\n")
 
   return (
-    <button
-      onClick={handleClick}
-      className="w-full h-11 rounded-lg border-2 border-[#25d366] text-[#25d366] font-bold text-sm hover:bg-[#25d366] hover:text-white transition-all flex items-center justify-center gap-2"
-    >
-      <MessageCircle className="h-4 w-4" />
-      Porosit ne WhatsApp
-    </button>
+    <Button asChild size="lg" variant="outline" className="w-full border-[#25d366]/40 hover:border-[#25d366] hover:bg-[#25d366]/8">
+      <a href={whatsappLink(message)} target="_blank" rel="noopener noreferrer">
+        <WhatsAppIcon className="size-[18px] text-[#25d366]" />
+        Porosit në WhatsApp
+      </a>
+    </Button>
   )
 }

@@ -1,60 +1,63 @@
-# Mobileria Dardania
+# Flux Dekor
 
-An online furniture store for **Mobileria Dardania**, with a full shopping flow for customers and an admin dashboard for managing products, categories and orders.
+Online store for **Flux Dekor** (furniture, decor and tools, Kosovo) — a customer storefront plus an admin panel for products, categories and orders. Live at [flux-dekor.com](https://flux-dekor.com).
 
-Built with **Next.js 16**, **React 19**, **TypeScript** and **Supabase**.
+Built with **Next.js 16**, **React 19**, **TypeScript**, **Tailwind CSS v4** and **Supabase**.
 
 ## Features
 
 **Storefront**
-- Home page with a hero slider and featured furniture
-- Shop page with search, category filters, sorting and pagination
-- Product detail pages with image carousels
-- Cart, wishlist (works for guests and signed-in users) and checkout
-- Customer accounts: register, log in, profile and order history
-- Order requests sent by email (EmailJS) and a WhatsApp contact button
+- Editorial home page, category tiles and product rails (sale, new, bestsellers)
+- Shop with search, category + sub-category filters, price/colour/material filters, sorting and pagination (mobile filter sheet)
+- Product pages with a swipeable gallery and lightbox, spec accordions, JSON-LD and Open Graph metadata
+- Slide-over cart drawer, guest and customer carts, wishlist, live search (`Ctrl K` / `/`)
+- Checkout with cash on delivery or bank transfer — **prices, shipping and totals are always computed on the server**
+- Customer accounts: register, log in, profile, password change and order history
+- WhatsApp ordering, robots.txt and sitemap.xml
 
-**Admin dashboard**
-- Sales and order statistics with charts and category breakdowns
-- Create, edit and delete furniture and products with image uploads
-- Custom product fields built with a drag-and-drop field builder
-- Category management
-- Order request management
-- Store settings
+**Admin panel** (`/admin`)
+- Dashboard: revenue, orders, pending orders, average order value, 30-day revenue chart, top sellers, low stock
+- Orders: filter by status, search, order detail panel, status workflow, delete
+- Products: search/filter/sort, quick active/featured toggles, full editor with multi-image upload, cover ordering and custom fields
+- Categories: tree with sub-categories, ordering, active toggle, tile colour or image
+- Settings: material and colour options
 
 ## Tech stack
 
 | Area | Tools |
 |---|---|
 | Framework | Next.js 16 (App Router), React 19, TypeScript |
-| UI | Tailwind CSS, shadcn/ui (Radix UI), Lucide icons, Embla Carousel, Recharts |
-| Forms | React Hook Form, Zod |
-| Backend | Next.js API routes, Supabase (Postgres + Auth) |
+| UI | Tailwind CSS v4, Radix UI primitives, Lucide icons, Recharts, dnd-kit |
+| Validation | Zod (every API route validates its input) |
+| Backend | Route handlers, Supabase (Postgres + Auth + RLS) |
 | Storage | Vercel Blob (product images) |
-| Email | EmailJS |
 | Analytics | Vercel Analytics |
 
 ## Project structure
 
 ```
 app/
-  (storefront)   page.tsx, shop/, products/[slug]/, furniture/[id]/, cart/, checkout/, wishlist/
-  account/       login, register, profile, orders
-  admin/         dashboard, products, furniture, categories, settings
-  api/           cart, categories, furniture, orders, products, settings, uploads, wishlist
-components/      UI and feature components (admin/, providers/, ui/)
-lib/             Supabase clients, email helper, types, utils
-scripts/         SQL migrations and the admin-user setup script
+  page.tsx, shop/, products/[slug]/, cart/, checkout/, wishlist/   storefront
+  account/                    login, register, overview, orders, profile
+  admin/login/                admin sign-in
+  admin/(panel)/              dashboard, orders, products, categories, settings (guarded by one layout)
+  api/                        cart, categories, orders, products, settings, uploads, wishlist
+components/                   storefront components; admin/, account/, providers/, ui/
+lib/
+  auth/admin.ts               admin checks for pages and API routes
+  shop-config.ts              shipping rules, contact details, price helpers (shared by client and server)
+  validation/                 zod schemas and input sanitisers
+  supabase/                   browser, server, service-role clients and middleware
+scripts/                      SQL migrations and the admin-user script
 ```
 
 ## Getting started
 
 ### Prerequisites
-- Node.js 18+
+- Node.js 20.9+
 - [pnpm](https://pnpm.io/)
 - A [Supabase](https://supabase.com/) project
 - A Vercel Blob store (for image uploads)
-- An EmailJS account (for order emails)
 
 ### 1. Install
 ```bash
@@ -64,48 +67,44 @@ pnpm install
 ```
 
 ### 2. Environment variables
-Create a `.env.local` file in the project root:
+Copy `.env.example` to `.env.local` and fill it in:
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
-
+SUPABASE_SERVICE_ROLE_KEY=        # server only — never expose to the browser
 BLOB_READ_WRITE_TOKEN=
-
-NEXT_PUBLIC_EMAILJS_SERVICE_ID=
-NEXT_PUBLIC_EMAILJS_TEMPLATE_ID=
-NEXT_PUBLIC_EMAILJS_PUBLIC_KEY=
-
-NEXT_PUBLIC_WHATSAPP_NUMBER=
+NEXT_PUBLIC_SITE_URL=https://flux-dekor.com
+NEXT_PUBLIC_WHATSAPP_NUMBER=38349514788
 ```
 
 ### 3. Database
-Run the SQL files in `scripts/` in order (`001` → `007`) in the Supabase SQL editor. Then create the first admin account:
+Run the SQL files in `scripts/` in order in the Supabase SQL editor:
 
-```bash
-npx tsx scripts/create-admin-user.ts
-```
-
-### 4. Run
-```bash
-pnpm dev
-```
-Open http://localhost:3000. The admin panel is at `/admin`.
-
-## Scripts
-
-| Command | What it does |
+| File | Purpose |
 |---|---|
-| `pnpm dev` | Start the development server |
-| `pnpm build` | Build for production |
-| `pnpm start` | Run the production build |
-| `pnpm lint` | Run ESLint |
+| `001` – `007` | Base schema: products, admin users, custom fields, settings, orders, e-commerce tables |
+| `002` | Removes the old trigger that made every new sign-up an admin |
+| `008_security_hardening.sql` | RLS fixes, atomic stock decrement, order-number sequence, constraints. **Required.** Idempotent — safe to re-run |
+
+### 4. Create an admin
+Admins are never created by sign-up. Create one explicitly:
+
+```bash
+ADMIN_EMAIL=you@example.com ADMIN_PASSWORD='a-long-unique-password' pnpm create-admin
+```
+
+### 5. Run
+```bash
+pnpm dev        # http://localhost:3000
+pnpm typecheck
+pnpm build
+```
+
+## Business rules
+
+Shipping cost, the free-shipping threshold, the low-stock warning level and contact details live in `lib/shop-config.ts`. The same values are used for display and for server-side order pricing, so they can't drift apart.
 
 ## Deployment
 
-Designed to deploy on [Vercel](https://vercel.com/). Add the environment variables above in the Vercel project settings.
-
----
-
-Built by [Ilaz Gashi](https://github.com/iligashi) · [Nexora Agency](https://nexoraagency.llc/)
+Deployed on Vercel. When a change ships with a new SQL migration, **run the migration in Supabase before deploying the code**.

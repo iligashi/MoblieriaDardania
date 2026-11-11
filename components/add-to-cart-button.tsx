@@ -1,67 +1,70 @@
 "use client"
 
 import { useState } from "react"
-import { useCart } from "@/components/providers/cart-provider"
-import { Button } from "@/components/ui/button"
-import { ShoppingCart, Minus, Plus, Loader2 } from "lucide-react"
+import { Check, Heart, Loader2, ShoppingBag } from "lucide-react"
 import { toast } from "sonner"
+import { useCart } from "@/components/providers/cart-provider"
+import { useWishlist } from "@/components/providers/wishlist-provider"
+import { Button } from "@/components/ui/button"
+import { QuantityStepper } from "@/components/cart-ui"
+import { SHOP } from "@/lib/shop-config"
+import { cn } from "@/lib/utils"
 import type { Product } from "@/lib/types"
 
 export function AddToCartButton({ product }: { product: Product }) {
   const [quantity, setQuantity] = useState(1)
-  const [isAdding, setIsAdding] = useState(false)
+  const [state, setState] = useState<"idle" | "adding" | "added">("idle")
   const { addItem } = useCart()
+  const { isInWishlist, toggleItem } = useWishlist()
+  const wishlisted = isInWishlist(product.id)
+  const max = Math.min(product.stock, SHOP.maxQuantityPerItem)
+  const outOfStock = product.stock <= 0
 
   const handleAdd = async () => {
-    if (product.stock <= 0 || isAdding) return
-    setIsAdding(true)
+    if (outOfStock || state === "adding") return
+    setState("adding")
     try {
       await addItem(product, quantity)
-      toast.success(`${product.title} u shtua ne shporte`)
+      setState("added")
       setQuantity(1)
+      setTimeout(() => setState("idle"), 1800)
+    } catch (err) {
+      setState("idle")
+      toast.error(err instanceof Error ? err.message : "Diçka shkoi gabim")
+    }
+  }
+
+  const handleWishlist = async () => {
+    try {
+      await toggleItem(product.id)
+      toast.success(wishlisted ? "U hoq nga lista e dëshirave" : "U shtua në listën e dëshirave")
     } catch {
-      toast.error("Dicka shkoi gabim")
-    } finally {
-      setIsAdding(false)
+      toast.error("Nuk u ruajt. Provoni përsëri.")
     }
   }
 
   return (
-    <div className="flex gap-3">
-      {/* Quantity Selector */}
-      <div className="flex items-center border border-border rounded-lg">
-        <button
-          onClick={() => setQuantity(Math.max(1, quantity - 1))}
-          className="h-11 w-11 flex items-center justify-center hover:bg-muted transition-colors rounded-l-lg"
-          disabled={quantity <= 1}
-        >
-          <Minus className="h-4 w-4" />
-        </button>
-        <span className="h-11 w-12 flex items-center justify-center text-sm font-medium border-x border-border">
-          {quantity}
-        </span>
-        <button
-          onClick={() => setQuantity(Math.min(product.stock, quantity + 1))}
-          className="h-11 w-11 flex items-center justify-center hover:bg-muted transition-colors rounded-r-lg"
-          disabled={quantity >= product.stock}
-        >
-          <Plus className="h-4 w-4" />
-        </button>
-      </div>
-
-      {/* Add to Cart */}
-      <Button
-        onClick={handleAdd}
-        disabled={product.stock <= 0 || isAdding}
-        className="flex-1 h-11 font-bold text-sm"
-        size="lg"
-      >
-        {isAdding ? (
-          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+    <div className="flex gap-2.5">
+      {!outOfStock && <QuantityStepper size="lg" value={quantity} max={max} onChange={setQuantity} />}
+      <Button size="lg" className="h-12 flex-1" onClick={handleAdd} disabled={outOfStock || state === "adding"}>
+        {state === "adding" ? (
+          <Loader2 className="animate-spin" />
+        ) : state === "added" ? (
+          <Check />
         ) : (
-          <ShoppingCart className="h-4 w-4 mr-2" />
+          <ShoppingBag />
         )}
-        {product.stock > 0 ? "SHTO NE SHPORTE" : "JO NE STOK"}
+        {outOfStock ? "Jo në stok" : state === "added" ? "U shtua" : "Shto në shportë"}
+      </Button>
+      <Button
+        size="icon-lg"
+        variant="outline"
+        className="size-12"
+        onClick={handleWishlist}
+        aria-pressed={wishlisted}
+        aria-label={wishlisted ? "Hiq nga lista e dëshirave" : "Shto në listën e dëshirave"}
+      >
+        <Heart className={cn(wishlisted && "fill-primary text-primary")} />
       </Button>
     </div>
   )

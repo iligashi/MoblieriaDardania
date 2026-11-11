@@ -1,130 +1,145 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useState } from "react"
+import { Loader2 } from "lucide-react"
+import { toast } from "sonner"
 import { useAuth } from "@/components/providers/auth-provider"
-import { useRouter } from "next/navigation"
+import { AccountShell } from "@/components/account/account-ui"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Loader2, ArrowLeft } from "lucide-react"
-import Link from "next/link"
-import { toast } from "sonner"
+import { Label } from "@/components/ui/label"
 import { createClient } from "@/lib/supabase/client"
 
 export default function ProfilePage() {
-  const { customer, isLoggedIn, isLoading: authLoading, refreshCustomer } = useAuth()
-  const router = useRouter()
-  const [isSaving, setIsSaving] = useState(false)
-  const [form, setForm] = useState({
-    first_name: "",
-    last_name: "",
-    phone: "",
-  })
+  const { customer, user, refreshCustomer } = useAuth()
+  const [form, setForm] = useState({ first_name: "", last_name: "", phone: "" })
+  const [saving, setSaving] = useState(false)
+  const [pw, setPw] = useState({ next: "", confirm: "" })
+  const [savingPw, setSavingPw] = useState(false)
 
   useEffect(() => {
-    if (!authLoading && !isLoggedIn) {
-      router.push("/account/login")
-    }
     if (customer) {
       setForm({
-        first_name: customer.first_name || "",
-        last_name: customer.last_name || "",
-        phone: customer.phone || "",
+        first_name: customer.first_name ?? "",
+        last_name: customer.last_name ?? "",
+        phone: customer.phone ?? "",
       })
     }
-  }, [authLoading, isLoggedIn, customer, router])
+  }, [customer])
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsSaving(true)
-
-    try {
-      const supabase = createClient()
-      const { error } = await supabase
-        .from("customers")
-        .update({
-          first_name: form.first_name,
-          last_name: form.last_name,
-          phone: form.phone,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", customer!.id)
-
-      if (error) throw error
-      toast.success("Profili u ndryshua me sukses")
-      await refreshCustomer()
-    } catch {
-      toast.error("Dicka shkoi gabim")
-    } finally {
-      setIsSaving(false)
+    if (!user) return
+    if (form.phone && !/^[+\d\s()-]{6,40}$/.test(form.phone.trim())) {
+      toast.error("Numri i telefonit nuk është valid")
+      return
     }
+    setSaving(true)
+    const { error } = await createClient()
+      .from("customers")
+      .update({
+        first_name: form.first_name.trim() || null,
+        last_name: form.last_name.trim() || null,
+        phone: form.phone.trim() || null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", user.id)
+    setSaving(false)
+    if (error) return toast.error("Ndryshimet nuk u ruajtën. Provoni përsëri.")
+    toast.success("Profili u përditësua")
+    await refreshCustomer()
   }
 
-  if (authLoading || !customer) {
-    return (
-      <div className="container mx-auto px-4 py-12">
-        <div className="animate-pulse h-48 bg-muted rounded-xl" />
-      </div>
-    )
+  const handlePassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (pw.next.length < 8) return toast.error("Fjalëkalimi duhet të ketë të paktën 8 karaktere")
+    if (pw.next !== pw.confirm) return toast.error("Fjalëkalimet nuk përputhen")
+    setSavingPw(true)
+    const { error } = await createClient().auth.updateUser({ password: pw.next })
+    setSavingPw(false)
+    if (error) return toast.error("Fjalëkalimi nuk u ndryshua. Provoni përsëri.")
+    setPw({ next: "", confirm: "" })
+    toast.success("Fjalëkalimi u ndryshua")
   }
 
   return (
-    <div className="bg-[#f8f9fa] min-h-[60vh]">
-      <div className="container mx-auto px-4 py-8 max-w-lg">
-        <Button variant="ghost" size="sm" asChild className="mb-4">
-          <Link href="/account">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Kthehu
-          </Link>
-        </Button>
-
-        <div className="bg-white rounded-xl border border-border/50 p-6">
-          <h1 className="text-xl font-bold mb-6">Profili im</h1>
-
-          <form onSubmit={handleSave} className="space-y-4">
-            <div>
-              <label className="text-sm font-medium mb-1.5 block">Email</label>
-              <Input value={customer.email} disabled className="h-11 bg-muted/30" />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium mb-1.5 block">Emri</label>
-                <Input
-                  value={form.first_name}
-                  onChange={(e) => setForm({ ...form, first_name: e.target.value })}
-                  className="h-11"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium mb-1.5 block">Mbiemri</label>
-                <Input
-                  value={form.last_name}
-                  onChange={(e) => setForm({ ...form, last_name: e.target.value })}
-                  className="h-11"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-1.5 block">Telefoni</label>
+    <AccountShell title="Profili im">
+      <div className="space-y-5">
+        <form onSubmit={handleSave} className="rounded-3xl border bg-card p-6 sm:p-7">
+          <h2 className="font-semibold">Të dhënat personale</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Përdoren për të plotësuar automatikisht porositë.</p>
+          <div className="mt-6 grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="first_name">Emri</Label>
               <Input
-                value={form.phone}
-                onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                className="h-11"
-                placeholder="+383 4X XXX XXX"
+                id="first_name"
+                autoComplete="given-name"
+                value={form.first_name}
+                onChange={(e) => setForm({ ...form, first_name: e.target.value })}
               />
             </div>
-            <Button type="submit" className="w-full h-11 font-bold" disabled={isSaving}>
-              {isSaving ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Duke ruajtur...
-                </>
-              ) : (
-                "Ruaj ndryshimet"
-              )}
-            </Button>
-          </form>
-        </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="last_name">Mbiemri</Label>
+              <Input
+                id="last_name"
+                autoComplete="family-name"
+                value={form.last_name}
+                onChange={(e) => setForm({ ...form, last_name: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="phone">Telefoni</Label>
+              <Input
+                id="phone"
+                type="tel"
+                autoComplete="tel"
+                placeholder="+383 4X XXX XXX"
+                value={form.phone}
+                onChange={(e) => setForm({ ...form, phone: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="email">Email</Label>
+              <Input id="email" value={customer?.email ?? user?.email ?? ""} disabled />
+            </div>
+          </div>
+          <Button type="submit" className="mt-6" disabled={saving || !user}>
+            {saving && <Loader2 className="animate-spin" />}
+            Ruaj ndryshimet
+          </Button>
+        </form>
+
+        <form onSubmit={handlePassword} className="rounded-3xl border bg-card p-6 sm:p-7">
+          <h2 className="font-semibold">Ndrysho fjalëkalimin</h2>
+          <div className="mt-6 grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="pw-next">Fjalëkalimi i ri</Label>
+              <Input
+                id="pw-next"
+                type="password"
+                autoComplete="new-password"
+                minLength={8}
+                value={pw.next}
+                onChange={(e) => setPw({ ...pw, next: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="pw-confirm">Konfirmo</Label>
+              <Input
+                id="pw-confirm"
+                type="password"
+                autoComplete="new-password"
+                value={pw.confirm}
+                onChange={(e) => setPw({ ...pw, confirm: e.target.value })}
+              />
+            </div>
+          </div>
+          <Button type="submit" variant="outline" className="mt-6" disabled={savingPw || !pw.next}>
+            {savingPw && <Loader2 className="animate-spin" />}
+            Përditëso fjalëkalimin
+          </Button>
+        </form>
       </div>
-    </div>
+    </AccountShell>
   )
 }

@@ -1,83 +1,78 @@
 "use client"
 
-import { useAuth } from "@/components/providers/auth-provider"
-import { useRouter } from "next/navigation"
-import { useEffect } from "react"
 import Link from "next/link"
-import { User, Package, Heart, LogOut } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { ArrowUpRight, Heart, Package, UserRound } from "lucide-react"
+import { useAuth } from "@/components/providers/auth-provider"
+import { useWishlist } from "@/components/providers/wishlist-provider"
+import { AccountShell, StatusPill } from "@/components/account/account-ui"
+import { useMyOrders } from "@/components/account/use-orders"
+import { formatPrice } from "@/lib/shop-config"
 
 export default function AccountPage() {
-  const { customer, isLoggedIn, isLoading, logout } = useAuth()
-  const router = useRouter()
+  const { customer } = useAuth()
+  const { itemCount } = useWishlist()
+  const { orders, loading } = useMyOrders()
+  const latest = orders[0]
+  const greeting = customer?.first_name ? `Përshëndetje, ${customer.first_name}` : "Llogaria ime"
 
-  useEffect(() => {
-    if (!isLoading && !isLoggedIn) {
-      router.push("/account/login")
-    }
-  }, [isLoading, isLoggedIn, router])
-
-  if (isLoading || !customer) {
-    return (
-      <div className="container mx-auto px-4 py-12">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 w-48 bg-muted rounded" />
-          <div className="h-32 bg-muted rounded" />
-        </div>
-      </div>
-    )
-  }
+  const cards = [
+    { href: "/account/orders", icon: Package, title: "Porositë", value: loading ? "…" : String(orders.length) },
+    { href: "/wishlist", icon: Heart, title: "Të ruajturat", value: String(itemCount) },
+    { href: "/account/profile", icon: UserRound, title: "Profili", value: customer?.phone ? "I plotë" : "Plotësoni" },
+  ]
 
   return (
-    <div className="bg-[#f8f9fa] min-h-[60vh]">
-      <div className="container mx-auto px-4 py-8 max-w-3xl">
-        <h1 className="text-2xl font-bold mb-2">Llogaria ime</h1>
-        <p className="text-muted-foreground mb-8">
-          Pershendetje, {customer.first_name} {customer.last_name}!
-        </p>
-
-        <div className="grid sm:grid-cols-2 gap-4">
+    <AccountShell title={greeting}>
+      <div className="grid gap-3 sm:grid-cols-3">
+        {cards.map((c) => (
           <Link
-            href="/account/orders"
-            className="bg-white rounded-xl border border-border/50 p-5 hover:shadow-md hover:border-primary/30 transition-all group"
+            key={c.href}
+            href={c.href}
+            className="group rounded-3xl border bg-card p-5 transition-shadow hover:shadow-[var(--shadow-soft)]"
           >
-            <Package className="h-8 w-8 text-primary mb-3" />
-            <h3 className="font-bold mb-1 group-hover:text-primary transition-colors">Porosite e mia</h3>
-            <p className="text-sm text-muted-foreground">Shiko statusin e porosive tuaja</p>
+            <div className="flex items-center justify-between">
+              <span className="grid size-10 place-items-center rounded-full bg-muted">
+                <c.icon className="size-[18px]" />
+              </span>
+              <ArrowUpRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+            </div>
+            <p className="mt-6 font-display text-4xl leading-none">{c.value}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{c.title}</p>
           </Link>
-
-          <Link
-            href="/wishlist"
-            className="bg-white rounded-xl border border-border/50 p-5 hover:shadow-md hover:border-primary/30 transition-all group"
-          >
-            <Heart className="h-8 w-8 text-primary mb-3" />
-            <h3 className="font-bold mb-1 group-hover:text-primary transition-colors">Lista e deshirave</h3>
-            <p className="text-sm text-muted-foreground">Produktet qe keni ruajtur</p>
-          </Link>
-
-          <Link
-            href="/account/profile"
-            className="bg-white rounded-xl border border-border/50 p-5 hover:shadow-md hover:border-primary/30 transition-all group"
-          >
-            <User className="h-8 w-8 text-primary mb-3" />
-            <h3 className="font-bold mb-1 group-hover:text-primary transition-colors">Profili im</h3>
-            <p className="text-sm text-muted-foreground">Ndrysho te dhenat personale</p>
-          </Link>
-
-          <div className="bg-white rounded-xl border border-border/50 p-5">
-            <LogOut className="h-8 w-8 text-destructive mb-3" />
-            <h3 className="font-bold mb-3">Dil nga llogaria</h3>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => { logout(); router.push("/") }}
-              className="border-destructive/30 text-destructive hover:bg-destructive hover:text-white"
-            >
-              Dil
-            </Button>
-          </div>
-        </div>
+        ))}
       </div>
-    </div>
+
+      <div className="mt-8 rounded-3xl border bg-card p-6">
+        <div className="flex items-center justify-between">
+          <h2 className="font-semibold">Porosia e fundit</h2>
+          {orders.length > 0 && (
+            <Link href="/account/orders" className="text-sm text-muted-foreground hover:text-foreground">
+              Të gjitha
+            </Link>
+          )}
+        </div>
+        {loading ? (
+          <div className="mt-4 h-16 animate-pulse rounded-2xl bg-muted" />
+        ) : latest ? (
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-muted/60 p-4">
+            <div>
+              <p className="font-mono text-sm font-semibold">{latest.order_number || `#${latest.id.slice(0, 8)}`}</p>
+              <p className="text-xs text-muted-foreground">
+                {new Date(latest.created_at).toLocaleDateString("sq-AL", { day: "numeric", month: "long", year: "numeric" })}
+              </p>
+            </div>
+            <StatusPill status={latest.status} />
+            <p className="font-semibold tabular-nums">{formatPrice(latest.total ?? latest.furniture_price)}</p>
+          </div>
+        ) : (
+          <p className="mt-4 text-sm text-muted-foreground">
+            Nuk keni ende porosi.{" "}
+            <Link href="/shop" className="font-medium text-foreground underline-offset-4 hover:underline">
+              Filloni blerjen
+            </Link>
+          </p>
+        )}
+      </div>
+    </AccountShell>
   )
 }
