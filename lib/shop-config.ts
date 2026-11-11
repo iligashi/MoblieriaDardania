@@ -13,7 +13,7 @@ export const SHOP = {
   contact: {
     phone: "+383 49 514 788",
     phoneHref: "tel:+38349514788",
-    whatsapp: "38349514788",
+    whatsapp: (process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "38349514788").replace(/\D/g, ""),
     email: "info@fluxdekor.com",
     instagram: "https://www.instagram.com/dardaniamobileri",
     hours: "10:00 – 22:00",
