@@ -14,7 +14,7 @@ export default function ProfilePage() {
   const { customer, user, refreshCustomer } = useAuth()
   const [form, setForm] = useState({ first_name: "", last_name: "", phone: "" })
   const [saving, setSaving] = useState(false)
-  const [pw, setPw] = useState({ next: "", confirm: "" })
+  const [pw, setPw] = useState({ current: "", next: "", confirm: "" })
   const [savingPw, setSavingPw] = useState(false)
 
   useEffect(() => {
@@ -52,13 +52,24 @@ export default function ProfilePage() {
 
   const handlePassword = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (pw.next.length < 8) return toast.error("Fjalëkalimi duhet të ketë të paktën 8 karaktere")
+    const email = user?.email
+    if (!email) return
+    if (!pw.current) return toast.error("Shkruani fjalëkalimin aktual")
+    if (pw.next.length < 10) return toast.error("Fjalëkalimi i ri duhet të ketë të paktën 10 karaktere")
+    if (pw.next === pw.current) return toast.error("Fjalëkalimi i ri duhet të jetë ndryshe nga ai aktual")
     if (pw.next !== pw.confirm) return toast.error("Fjalëkalimet nuk përputhen")
     setSavingPw(true)
-    const { error } = await createClient().auth.updateUser({ password: pw.next })
+    const supabase = createClient()
+    // Re-authenticate first, so a hijacked session alone can't take over the account.
+    const { error: authError } = await supabase.auth.signInWithPassword({ email, password: pw.current })
+    if (authError) {
+      setSavingPw(false)
+      return toast.error("Fjalëkalimi aktual nuk është i saktë")
+    }
+    const { error } = await supabase.auth.updateUser({ password: pw.next })
     setSavingPw(false)
     if (error) return toast.error("Fjalëkalimi nuk u ndryshua. Provoni përsëri.")
-    setPw({ next: "", confirm: "" })
+    setPw({ current: "", next: "", confirm: "" })
     toast.success("Fjalëkalimi u ndryshua")
   }
 
@@ -112,13 +123,24 @@ export default function ProfilePage() {
         <form onSubmit={handlePassword} className="rounded-3xl border bg-card p-6 sm:p-7">
           <h2 className="font-semibold">Ndrysho fjalëkalimin</h2>
           <div className="mt-6 grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label htmlFor="pw-current">Fjalëkalimi aktual</Label>
+              <Input
+                id="pw-current"
+                type="password"
+                autoComplete="current-password"
+                value={pw.current}
+                onChange={(e) => setPw({ ...pw, current: e.target.value })}
+                className="sm:max-w-[calc(50%-0.5rem)]"
+              />
+            </div>
             <div className="space-y-1.5">
               <Label htmlFor="pw-next">Fjalëkalimi i ri</Label>
               <Input
                 id="pw-next"
                 type="password"
                 autoComplete="new-password"
-                minLength={8}
+                minLength={10}
                 value={pw.next}
                 onChange={(e) => setPw({ ...pw, next: e.target.value })}
               />
@@ -134,7 +156,7 @@ export default function ProfilePage() {
               />
             </div>
           </div>
-          <Button type="submit" variant="outline" className="mt-6" disabled={savingPw || !pw.next}>
+          <Button type="submit" variant="outline" className="mt-6" disabled={savingPw || !pw.next || !pw.current}>
             {savingPw && <Loader2 className="animate-spin" />}
             Përditëso fjalëkalimin
           </Button>
