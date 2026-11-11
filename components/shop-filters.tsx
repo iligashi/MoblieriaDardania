@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { Check, SlidersHorizontal, X } from "lucide-react"
+import { SlidersHorizontal, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
@@ -51,7 +51,7 @@ function FilterGroup({ title, children }: { title: string; children: React.React
   )
 }
 
-export function ShopFilters({ categories, colors, materials }: FilterProps) {
+export function ShopFilters({ colors, materials }: FilterProps) {
   const { searchParams, push, set } = useFilterNav()
   const [minPrice, setMinPrice] = useState(searchParams.get("minPrice") ?? "")
   const [maxPrice, setMaxPrice] = useState(searchParams.get("maxPrice") ?? "")
@@ -61,10 +61,8 @@ export function ShopFilters({ categories, colors, materials }: FilterProps) {
     setMaxPrice(searchParams.get("maxPrice") ?? "")
   }, [searchParams])
 
-  const activeCategory = searchParams.get("category") ?? ""
   const activeColor = searchParams.get("color") ?? ""
   const activeMaterial = searchParams.get("material") ?? ""
-  const roots = categories.filter((c) => !c.parent_id)
 
   const applyPrice = (e: React.FormEvent) => {
     e.preventDefault()
@@ -86,40 +84,6 @@ export function ShopFilters({ categories, colors, materials }: FilterProps) {
 
   return (
     <div>
-      {roots.length > 0 && (
-        <FilterGroup title="Kategoria">
-          <ul className="space-y-0.5">
-            <li>
-              <CategoryButton active={!activeCategory} onClick={() => set("category", null)}>
-                Të gjitha
-              </CategoryButton>
-            </li>
-            {roots.map((cat) => {
-              const children = categories.filter((c) => c.parent_id === cat.id)
-              const open = activeCategory === cat.slug || children.some((c) => c.slug === activeCategory)
-              return (
-                <li key={cat.id}>
-                  <CategoryButton active={activeCategory === cat.slug} onClick={() => set("category", cat.slug)}>
-                    {cat.name}
-                  </CategoryButton>
-                  {open && children.length > 0 && (
-                    <ul className="mt-0.5 mb-1 ml-3 space-y-0.5 border-l pl-2">
-                      {children.map((sub) => (
-                        <li key={sub.id}>
-                          <CategoryButton small active={activeCategory === sub.slug} onClick={() => set("category", sub.slug)}>
-                            {sub.name}
-                          </CategoryButton>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </li>
-              )
-            })}
-          </ul>
-        </FilterGroup>
-      )}
-
       <FilterGroup title="Çmimi (€)">
         <form onSubmit={applyPrice} className="space-y-2.5">
           <div className="flex items-center gap-2">
@@ -177,34 +141,6 @@ export function ShopFilters({ categories, colors, materials }: FilterProps) {
         </div>
       </FilterGroup>
     </div>
-  )
-}
-
-function CategoryButton({
-  active,
-  small,
-  onClick,
-  children,
-}: {
-  active: boolean
-  small?: boolean
-  onClick: () => void
-  children: React.ReactNode
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-current={active ? "true" : undefined}
-      className={cn(
-        "flex w-full items-center justify-between rounded-lg px-2.5 text-left transition-colors",
-        small ? "py-1.5 text-[13px]" : "py-2 text-sm",
-        active ? "bg-ink font-medium text-ink-foreground" : "text-foreground/80 hover:bg-muted hover:text-foreground",
-      )}
-    >
-      {children}
-      {active && <Check className="size-3.5" />}
-    </button>
   )
 }
 

@@ -5,11 +5,13 @@ import { requireAdminPage } from "@/lib/auth/admin"
 import { Button } from "@/components/ui/button"
 import { PageHeader } from "@/components/admin/admin-ui"
 import { ProductsTable } from "@/components/admin/products-table"
+import { isUuid } from "@/lib/validation"
 import type { Category, Product } from "@/lib/types"
 
 export const metadata: Metadata = { title: "Produktet" }
 
-export default async function AdminProductsPage() {
+export default async function AdminProductsPage({ searchParams }: { searchParams: Promise<{ category?: string }> }) {
+  const { category } = await searchParams
   const { db } = await requireAdminPage()
   const [products, categories] = await Promise.all([
     db.from("products").select("*").order("created_at", { ascending: false }),
@@ -29,7 +31,11 @@ export default async function AdminProductsPage() {
           </Button>
         }
       />
-      <ProductsTable initialProducts={(products.data as Product[]) ?? []} categories={(categories.data as Category[]) ?? []} />
+      <ProductsTable
+        initialProducts={(products.data as Product[]) ?? []}
+        categories={(categories.data as Category[]) ?? []}
+        initialCategory={category === "none" || isUuid(category) ? category : "all"}
+      />
     </>
   )
 }

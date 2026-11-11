@@ -6,7 +6,10 @@ import { Button } from "@/components/ui/button"
 import { WhatsAppIcon } from "@/components/icons"
 import { Price } from "@/components/price"
 import { SHOP, formatPrice, whatsappLink } from "@/lib/shop-config"
-import type { Category, Product } from "@/lib/types"
+import { CategoryCard } from "@/components/category-card"
+import { getCategoryOverview } from "@/lib/catalog"
+import { cn } from "@/lib/utils"
+import type { Product } from "@/lib/types"
 
 const VALUE_PROPS = [
   { icon: Truck, title: "Dërgesë 24–48 orë", text: `Falas për porosi mbi ${formatPrice(SHOP.freeShippingThreshold)}` },
@@ -19,18 +22,18 @@ export default async function HomePage() {
   const supabase = await createClient()
   const base = () => supabase.from("products").select("*").eq("is_active", true)
 
-  const [featured, newest, sale, bestsellers, cats] = await Promise.all([
+  const [featured, newest, sale, bestsellers, overview] = await Promise.all([
     base().eq("is_featured", true).order("updated_at", { ascending: false }).limit(3),
     base().eq("is_new", true).order("created_at", { ascending: false }).limit(8),
     base().not("discount_price", "is", null).order("updated_at", { ascending: false }).limit(8),
     base().eq("is_bestseller", true).order("updated_at", { ascending: false }).limit(8),
-    supabase.from("categories").select("*").eq("is_active", true).is("parent_id", null).order("display_order").limit(8),
+    getCategoryOverview(supabase),
   ])
 
   const newProducts = (newest.data as Product[]) ?? []
   const saleProducts = ((sale.data as Product[]) ?? []).filter((p) => p.discount_price != null && p.discount_price < p.price)
   const bestsellerProducts = (bestsellers.data as Product[]) ?? []
-  const categories = (cats.data as Category[]) ?? []
+  const categories = overview.roots.slice(0, 8)
   const heroProducts = [...((featured.data as Product[]) ?? []), ...newProducts, ...bestsellerProducts]
     .filter((p, i, arr) => p.images?.[0] && arr.findIndex((x) => x.id === p.id) === i)
     .slice(0, 3)
@@ -100,10 +103,17 @@ export default async function HomePage() {
       {/* Categories */}
       {categories.length > 0 && (
         <section className="container-page pt-20">
-          <SectionHeader eyebrow="Kategoritë" title="Bli sipas hapësirës" href="/shop" cta="Të gjitha kategoritë" />
-          <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
-            {categories.map((cat, i) => (
-              <CategoryTile key={cat.id} category={cat} index={i} />
+          <SectionHeader eyebrow="Kategoritë" title="Bli sipas kategorisë" href="/shop" cta="Të gjitha produktet" />
+          <div
+            className={cn(
+              "mt-8 grid gap-4",
+              categories.length === 2 && "lg:grid-cols-2",
+              categories.length === 4 && "sm:grid-cols-2 lg:grid-cols-4",
+              (categories.length === 3 || categories.length > 4) && "sm:grid-cols-2 lg:grid-cols-3",
+            )}
+          >
+            {categories.map((cat) => (
+              <CategoryCard key={cat.id} category={cat} variant={categories.length <= 2 ? "wide" : "compact"} />
             ))}
           </div>
         </section>
@@ -215,50 +225,6 @@ function SectionHeader({
         <ArrowUpRight className="size-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
       </Link>
     </div>
-  )
-}
-
-const TILE_TINTS = ["bg-[#efe7dc]", "bg-[#e3e8e1]", "bg-[#ece3e3]", "bg-[#e4e4ea]"]
-
-function CategoryTile({ category, index }: { category: Category; index: number }) {
-  const isColor = category.image?.startsWith("#")
-  const isImage = category.image && !isColor
-  return (
-    <Link
-      href={`/shop?category=${category.slug}`}
-      className={`group relative flex aspect-[5/4] flex-col justify-end overflow-hidden rounded-2xl p-4 sm:p-5 ${
-        isColor || isImage ? "" : TILE_TINTS[index % TILE_TINTS.length]
-      }`}
-      style={isColor ? { backgroundColor: category.image! } : undefined}
-    >
-      {isImage && (
-        <>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={category.image!}
-            alt=""
-            loading="lazy"
-            className="absolute inset-0 size-full object-cover transition-transform duration-700 group-hover:scale-105"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
-        </>
-      )}
-      {isColor && <div className="absolute inset-0 bg-gradient-to-t from-black/35 to-transparent" />}
-      <div className="relative flex items-end justify-between gap-2">
-        <span
-          className={`font-display text-2xl leading-none sm:text-3xl ${isImage || isColor ? "text-white" : "text-foreground"}`}
-        >
-          {category.name}
-        </span>
-        <span
-          className={`grid size-9 shrink-0 place-items-center rounded-full transition-transform duration-300 group-hover:rotate-45 ${
-            isImage || isColor ? "bg-white/90 text-foreground" : "bg-card text-foreground"
-          }`}
-        >
-          <ArrowUpRight className="size-4" />
-        </span>
-      </div>
-    </Link>
   )
 }
 
