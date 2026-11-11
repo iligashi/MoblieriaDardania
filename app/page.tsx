@@ -267,7 +267,7 @@ function HeroCollage({ products }: { products: Product[] }) {
     return (
       <div className="relative hidden aspect-[4/5] overflow-hidden rounded-[2rem] bg-[#efe7dc] lg:block">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/flux-removebg-preview.png" alt="" className="absolute inset-0 m-auto w-1/2 opacity-80" />
+        <img src="/flux-wordmark.png" alt="" className="absolute inset-0 m-auto w-1/2 opacity-80 mix-blend-multiply" />
       </div>
     )
   }

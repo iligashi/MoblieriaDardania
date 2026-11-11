@@ -1,29 +1,34 @@
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 
-export function Logo({ className, inverted = false }: { className?: string; inverted?: boolean }) {
+/** The FLUX wordmark (cropped from the brand PNG) with a small "Dekor" tag. */
+export function Wordmark({ inverted = false, className }: { inverted?: boolean; className?: string }) {
   return (
-    <Link href="/" aria-label="Flux Dekor — Ballina" className={cn("group inline-flex items-center gap-2.5", className)}>
+    <span className={cn("inline-flex items-end gap-2", className)}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/flux-wordmark.png"
+        alt="Flux"
+        width={410}
+        height={145}
+        className={cn("h-[22px] w-auto", inverted && "brightness-0 invert")}
+      />
       <span
         className={cn(
-          "grid size-9 place-items-center overflow-hidden rounded-xl border transition-transform duration-300 group-hover:-rotate-3",
-          inverted ? "border-white/15 bg-white" : "border-border bg-card",
+          "mb-px text-[9px] leading-none font-semibold tracking-[0.32em] uppercase",
+          inverted ? "text-white/60" : "text-muted-foreground",
         )}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/flux-removebg-preview.png" alt="" width={36} height={36} className="size-[150%] max-w-none object-contain" />
+        Dekor
       </span>
-      <span className="flex flex-col leading-none">
-        <span className={cn("font-display text-[22px] leading-none", inverted ? "text-white" : "text-foreground")}>Flux</span>
-        <span
-          className={cn(
-            "mt-0.5 text-[9px] font-semibold tracking-[0.32em] uppercase",
-            inverted ? "text-white/60" : "text-muted-foreground",
-          )}
-        >
-          Dekor
-        </span>
-      </span>
+    </span>
+  )
+}
+
+export function Logo({ className, inverted = false }: { className?: string; inverted?: boolean }) {
+  return (
+    <Link href="/" aria-label="Flux Dekor — Ballina" className={cn("inline-flex items-center", className)}>
+      <Wordmark inverted={inverted} />
     </Link>
   )
 }
