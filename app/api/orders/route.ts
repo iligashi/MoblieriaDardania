@@ -1,201 +1,187 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createServiceRoleClient } from "@/lib/supabase/service-role"
+import { isAdminUser } from "@/lib/auth/admin"
+import { checkoutSchema, parseJson } from "@/lib/validation"
+import { round2, shippingFor, unitPrice } from "@/lib/shop-config"
 
 export async function GET() {
   try {
     const supabase = await createClient()
-    const supabaseAdmin = createServiceRoleClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
 
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Check if admin
-    const { data: adminData } = await supabaseAdmin.from("admin_users").select("id").eq("id", user.id).single()
+    const service = createServiceRoleClient()
+    const admin = await isAdminUser(user.id)
 
-    let query = supabaseAdmin.from("orders").select("*, order_items(*)")
+    let query = service.from("orders").select("*, order_items(*)")
+    if (!admin) query = query.eq("customer_id", user.id)
 
-    if (!adminData) {
-      // Customer can only see own orders
-      query = query.eq("customer_id", user.id)
-    }
-
-    const { data, error } = await query.order("created_at", { ascending: false })
+    const { data, error } = await query.order("created_at", { ascending: false }).limit(admin ? 500 : 100)
     if (error) throw error
 
-    // Map order_items to items for frontend compatibility
-    const orders = (data || []).map((order: Record<string, unknown>) => ({
-      ...order,
-      items: order.order_items || [],
-    }))
-
+    const orders = (data || []).map((order) => ({ ...order, items: order.order_items || [] }))
     return NextResponse.json(orders)
   } catch (error) {
-    console.error("Error fetching orders:", error)
+    console.error("[orders] list failed:", error)
     return NextResponse.json({ error: "Failed to fetch orders" }, { status: 500 })
   }
 }
 
+async function nextOrderNumber(service: ReturnType<typeof createServiceRoleClient>): Promise<string> {
+  // Preferred: an atomic sequence in the database (scripts/008_security_hardening.sql).
+  const { data, error } = await service.rpc("next_order_number")
+  if (!error && typeof data === "string" && data) return data
+
+  // Fallback while the migration has not been applied yet: date + random suffix,
+  // which cannot collide the way the old "count + 1" number did.
+  const today = new Date().toISOString().slice(0, 10).replace(/-/g, "")
+  const suffix = crypto.randomUUID().replace(/-/g, "").slice(0, 6).toUpperCase()
+  return `ORD-${today}-${suffix}`
+}
+
 export async function POST(request: Request) {
+  const parsed = await parseJson(request, checkoutSchema)
+  if ("error" in parsed) return parsed.error
+  const input = parsed.data
+
   try {
-    const body = await request.json()
-    const supabaseAdmin = createServiceRoleClient()
+    const service = createServiceRoleClient()
 
-    // Support both legacy single-item and new multi-item orders
-    const isLegacy = body.furnitureId && !body.items
-
-    if (isLegacy) {
-      // Legacy single-item order request (backwards compat)
-      const { data, error } = await supabaseAdmin
-        .from("orders")
-        .insert([{
-          furniture_id: body.furnitureId,
-          furniture_title: body.furnitureTitle,
-          furniture_price: body.furniturePrice,
-          customer_name: body.customerName,
-          customer_email: body.customerEmail,
-          customer_phone: body.customerPhone,
-          customer_message: body.customerMessage,
-          send_via_email: body.sendViaEmail || false,
-          send_via_whatsapp: body.sendViaWhatsApp || false,
-        }])
-        .select()
-        .single()
-
-      if (error) throw error
-      return NextResponse.json({ order: data }, { status: 201 })
+    // Merge duplicate lines so a product cannot be ordered twice to dodge stock checks.
+    const quantities = new Map<string, number>()
+    for (const item of input.items) {
+      quantities.set(item.product_id, (quantities.get(item.product_id) || 0) + item.quantity)
     }
+    const productIds = [...quantities.keys()]
 
-    // Multi-item checkout order
-    const {
-      items,
-      customer_name,
-      customer_email,
-      customer_phone,
-      billing_address,
-      shipping_address,
-      subtotal,
-      shipping_cost,
-      total,
-      payment_method,
-      notes,
-      send_via_whatsapp,
-    } = body
+    // Load the real products. Prices always come from the database, never from the client.
+    const { data: products, error: productsError } = await service
+      .from("products")
+      .select("id, title, price, discount_price, stock, images, is_active")
+      .in("id", productIds)
 
-    if (!items || items.length === 0) {
-      return NextResponse.json({ error: "Shporta eshte bosh" }, { status: 400 })
-    }
+    if (productsError) throw productsError
 
-    if (!customer_name || !customer_phone) {
-      return NextResponse.json({ error: "Emri dhe telefoni jane te detyrueshme" }, { status: 400 })
-    }
-
-    // Generate order number
-    const today = new Date().toISOString().slice(0, 10).replace(/-/g, "")
-    const { count } = await supabaseAdmin
-      .from("orders")
-      .select("*", { count: "exact", head: true })
-      .gte("created_at", new Date().toISOString().slice(0, 10))
-
-    const seq = String((count || 0) + 1).padStart(3, "0")
-    const orderNumber = `ORD-${today}-${seq}`
-
-    // Check customer auth
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    let customerId = null
-
-    if (user) {
-      const { data: adminCheck } = await supabase.from("admin_users").select("id").eq("id", user.id).single()
-      if (!adminCheck) {
-        customerId = user.id
+    const byId = new Map((products || []).map((p) => [p.id as string, p]))
+    const lines = []
+    for (const [productId, quantity] of quantities) {
+      const product = byId.get(productId)
+      if (!product || product.is_active === false) {
+        return NextResponse.json(
+          { error: "Nje nga produktet nuk eshte me ne dispozicion. Ju lutem rifreskoni shporten." },
+          { status: 409 },
+        )
       }
+      if (Number(product.stock) < quantity) {
+        return NextResponse.json(
+          {
+            error:
+              Number(product.stock) > 0
+                ? `"${product.title}" ka vetem ${product.stock} cope ne stok.`
+                : `"${product.title}" nuk eshte me ne stok.`,
+          },
+          { status: 409 },
+        )
+      }
+      const price = unitPrice({ price: Number(product.price), discount_price: product.discount_price })
+      lines.push({
+        product_id: productId,
+        product_title: product.title as string,
+        product_image: (product.images as string[] | null)?.[0] ?? null,
+        price,
+        quantity,
+        subtotal: round2(price * quantity),
+      })
     }
 
-    // Create order (explicitly null legacy fields so NOT NULL constraints don't block)
-    const orderPayload: Record<string, unknown> = {
-      order_number: orderNumber,
-      customer_id: customerId,
-      customer_name,
-      customer_email: customer_email || null,
-      customer_phone,
-      billing_address: billing_address || null,
-      shipping_address: shipping_address || null,
-      subtotal,
-      shipping_cost: shipping_cost || 0,
-      total,
-      payment_method: payment_method || "cash_on_delivery",
-      notes: notes || null,
-      send_via_whatsapp: send_via_whatsapp || false,
-      status: "pending",
-      // Legacy fields - set first item data as fallback
-      furniture_id: items[0]?.product_id || null,
-      furniture_title: items[0]?.product_title || customer_name,
-      furniture_price: total,
-    }
+    const subtotal = round2(lines.reduce((sum, l) => sum + l.subtotal, 0))
+    const shippingCost = shippingFor(subtotal)
+    const total = round2(subtotal + shippingCost)
 
-    const { data: order, error: orderError } = await supabaseAdmin
+    // Attach the order to the signed-in customer (admins placing test orders stay anonymous).
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    const customerId = user && !(await isAdminUser(user.id)) ? user.id : null
+
+    const orderNumber = await nextOrderNumber(service)
+    const shipping = input.shipping_address
+    const billing = input.billing_address ?? shipping
+
+    const { data: order, error: orderError } = await service
       .from("orders")
-      .insert([orderPayload])
+      .insert({
+        order_number: orderNumber,
+        customer_id: customerId,
+        customer_name: input.customer_name,
+        customer_email: input.customer_email,
+        customer_phone: input.customer_phone,
+        billing_address: billing,
+        shipping_address: shipping,
+        subtotal,
+        shipping_cost: shippingCost,
+        total,
+        payment_method: input.payment_method,
+        notes: input.notes,
+        send_via_whatsapp: false,
+        status: "pending",
+        // Legacy columns kept for older dashboard rows. furniture_id stays NULL on purpose:
+        // its foreign key used ON DELETE CASCADE, so deleting a product used to delete orders.
+        furniture_id: null,
+        furniture_title: lines.length > 1 ? `${lines[0].product_title} +${lines.length - 1}` : lines[0].product_title,
+        furniture_price: total,
+      })
       .select()
       .single()
 
-    if (orderError) {
-      console.error("Order insert error details:", orderError)
-      throw orderError
-    }
+    if (orderError) throw orderError
 
-    // Create order items and decrement stock
-    const orderItems = items.map((item: { product_id: string; product_title: string; product_image: string | null; price: number; quantity: number }) => ({
-      order_id: order.id,
-      product_id: item.product_id,
-      product_title: item.product_title,
-      product_image: item.product_image,
-      price: item.price,
-      quantity: item.quantity,
-      subtotal: item.price * item.quantity,
-    }))
-
-    const { error: itemsError } = await supabaseAdmin
+    const { error: itemsError } = await service
       .from("order_items")
-      .insert(orderItems)
+      .insert(lines.map((line) => ({ ...line, order_id: order.id })))
 
     if (itemsError) {
-      console.error("Error creating order items:", itemsError)
+      // Never leave an order without its items: roll the order back.
+      await service.from("orders").delete().eq("id", order.id)
+      throw itemsError
     }
 
-    // Decrement stock for each product (non-blocking, never fail the order)
-    for (const item of items) {
-      try {
-        const { error: rpcError } = await supabaseAdmin.rpc("decrement_stock", {
-          p_product_id: item.product_id,
-          p_quantity: item.quantity,
-        })
-        if (rpcError) {
-          // Fallback: manual decrement if RPC doesn't exist
-          const { data: product } = await supabaseAdmin
-            .from("products")
-            .select("stock")
-            .eq("id", item.product_id)
-            .single()
-          if (product) {
-            await supabaseAdmin
-              .from("products")
-              .update({ stock: Math.max(0, product.stock - item.quantity) })
-              .eq("id", item.product_id)
-          }
-        }
-      } catch {
-        // Stock update failed - log but don't fail the order
-        console.error("Stock decrement failed for product:", item.product_id)
+    // Decrement stock atomically. `decrement_stock` only succeeds when enough stock is left.
+    for (const line of lines) {
+      const { error: rpcError } = await service.rpc("decrement_stock", {
+        p_product_id: line.product_id,
+        p_quantity: line.quantity,
+      })
+      if (rpcError) {
+        // Function not installed yet: conditional update that cannot go below zero.
+        const product = byId.get(line.product_id)!
+        const { error: fallbackError } = await service
+          .from("products")
+          .update({ stock: Math.max(0, Number(product.stock) - line.quantity) })
+          .eq("id", line.product_id)
+          .gte("stock", line.quantity)
+        if (fallbackError) console.error("[orders] stock update failed:", line.product_id, fallbackError.message)
       }
     }
 
-    return NextResponse.json({ order }, { status: 201 })
+    // Clear the server-side cart that produced this order.
+    if (customerId) {
+      await service.from("cart_items").delete().eq("customer_id", customerId)
+    }
+
+    return NextResponse.json(
+      { order: { id: order.id, order_number: order.order_number, total: order.total } },
+      { status: 201 },
+    )
   } catch (error) {
-    console.error("Order creation error:", error)
-    return NextResponse.json({ error: "Gabim ne krijimin e porosise" }, { status: 500 })
+    console.error("[orders] create failed:", error)
+    return NextResponse.json({ error: "Gabim ne krijimin e porosise. Ju lutem provoni perseri." }, { status: 500 })
   }
 }

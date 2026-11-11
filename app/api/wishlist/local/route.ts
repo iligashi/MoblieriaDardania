@@ -1,26 +1,24 @@
-import { createServiceRoleClient } from "@/lib/supabase/service-role"
 import { NextResponse, type NextRequest } from "next/server"
+import { createClient } from "@/lib/supabase/server"
+import { isUuid } from "@/lib/validation"
 
+/** Resolves a guest's locally stored wishlist (product ids) into active products. */
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
-    const ids = searchParams.get("ids")
+    const ids = (request.nextUrl.searchParams.get("ids") || "")
+      .split(",")
+      .filter(isUuid)
+      .slice(0, 100)
 
-    if (!ids) return NextResponse.json([])
+    if (ids.length === 0) return NextResponse.json([])
 
-    const productIds = ids.split(",").filter(Boolean)
-    if (productIds.length === 0) return NextResponse.json([])
-
-    const supabase = createServiceRoleClient()
-    const { data, error } = await supabase
-      .from("products")
-      .select("*")
-      .in("id", productIds)
+    const supabase = await createClient()
+    const { data, error } = await supabase.from("products").select("*").eq("is_active", true).in("id", ids)
 
     if (error) throw error
     return NextResponse.json(data || [])
   } catch (error) {
-    console.error("Error fetching wishlist products:", error)
+    console.error("[wishlist] local lookup failed:", error)
     return NextResponse.json({ error: "Failed to fetch products" }, { status: 500 })
   }
 }

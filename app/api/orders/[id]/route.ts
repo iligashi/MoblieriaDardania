@@ -1,109 +1,80 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
+import { createServiceRoleClient } from "@/lib/supabase/service-role"
+import { isAdminUser, requireAdminApi } from "@/lib/auth/admin"
+import { isUuid, orderStatusSchema, parseJson } from "@/lib/validation"
 
-const ALLOWED_STATUS = new Set([
-  "pending", "confirmed", "processing", "shipped", "delivered", "cancelled",
-  "in_progress", "completed",
-])
+type Params = { params: Promise<{ id: string }> }
 
-export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(_request: Request, { params }: Params) {
+  const { id } = await params
+  if (!isUuid(id)) return NextResponse.json({ error: "Order not found" }, { status: 404 })
+
   try {
-    const { id } = await params
     const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
+    const service = createServiceRoleClient()
+    const { data: order } = await service.from("orders").select("*, order_items(*)").eq("id", id).maybeSingle()
 
-    const { data: order, error } = await supabase
-      .from("orders")
-      .select("*, order_items(*)")
-      .eq("id", id)
-      .single()
-
-    if (error || !order) {
+    // Same 404 for "missing" and "not yours" so order ids cannot be probed.
+    if (!order || (order.customer_id !== user.id && !(await isAdminUser(user.id)))) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 })
     }
 
-    // Check if admin or order belongs to customer
-    const { data: adminCheck } = await supabase.from("admin_users").select("id").eq("id", user.id).single()
-    if (!adminCheck && order.customer_id !== user.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
-    }
-
-    return NextResponse.json(order)
+    return NextResponse.json({ ...order, items: order.order_items || [] })
   } catch (error) {
-    console.error("Error fetching order:", error)
+    console.error("[orders] fetch failed:", error)
     return NextResponse.json({ error: "Failed to fetch order" }, { status: 500 })
   }
 }
 
-export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function PATCH(request: Request, { params }: Params) {
+  const auth = await requireAdminApi()
+  if (auth instanceof NextResponse) return auth
+
+  const { id } = await params
+  if (!isUuid(id)) return NextResponse.json({ error: "Order not found" }, { status: 404 })
+
+  const parsed = await parseJson(request, orderStatusSchema)
+  if ("error" in parsed) return parsed.error
+
   try {
-    const { id } = await params
-    const supabase = await createClient()
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
-    // Only admins can update order status
-    const { data: adminCheck } = await supabase.from("admin_users").select("id").eq("id", user.id).single()
-    if (!adminCheck) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
-    }
-
-    const body = await request.json()
-    const { status } = body ?? {}
-
-    if (!status || typeof status !== "string" || !ALLOWED_STATUS.has(status)) {
-      return NextResponse.json({ error: "Invalid status value." }, { status: 400 })
-    }
-
-    const { data, error } = await supabase
+    const service = createServiceRoleClient()
+    const { data, error } = await service
       .from("orders")
-      .update({ status, updated_at: new Date().toISOString() })
+      .update({ status: parsed.data.status, updated_at: new Date().toISOString() })
       .eq("id", id)
       .select()
       .single()
 
-    if (error) {
-      console.error("Failed to update order status:", error)
-      return NextResponse.json({ error: "Failed to update order status." }, { status: 500 })
-    }
-
+    if (error) throw error
     return NextResponse.json({ order: data })
   } catch (error) {
-    console.error("Unexpected status update error:", error)
-    return NextResponse.json({ error: "Unexpected error updating order." }, { status: 500 })
+    console.error("[orders] status update failed:", error)
+    return NextResponse.json({ error: "Failed to update order status." }, { status: 500 })
   }
 }
 
-export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(_request: Request, { params }: Params) {
+  const auth = await requireAdminApi()
+  if (auth instanceof NextResponse) return auth
+
+  const { id } = await params
+  if (!isUuid(id)) return NextResponse.json({ error: "Order not found" }, { status: 404 })
+
   try {
-    const { id } = await params
-    const supabase = await createClient()
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
-    const { data: adminCheck } = await supabase.from("admin_users").select("id").eq("id", user.id).single()
-    if (!adminCheck) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
-    }
-
-    // Delete order items first, then order
-    await supabase.from("order_items").delete().eq("order_id", id)
-    const { error } = await supabase.from("orders").delete().eq("id", id)
-
+    const service = createServiceRoleClient()
+    // order_items has ON DELETE CASCADE, but delete explicitly for older schemas.
+    await service.from("order_items").delete().eq("order_id", id)
+    const { error } = await service.from("orders").delete().eq("id", id)
     if (error) throw error
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("Error deleting order:", error)
+    console.error("[orders] delete failed:", error)
     return NextResponse.json({ error: "Failed to delete order" }, { status: 500 })
   }
 }

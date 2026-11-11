@@ -1,50 +1,42 @@
-import { createClient } from "@/lib/supabase/server"
 import { NextResponse, type NextRequest } from "next/server"
+import { createClient } from "@/lib/supabase/server"
+import { requireAdminApi } from "@/lib/auth/admin"
+import { parseJson, productSchema, sanitizeSearch, sanitizeSlug, slugify, isUuid } from "@/lib/validation"
+import { toProductRow } from "@/lib/products"
 
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient()
-    const { searchParams } = new URL(request.url)
+    const sp = request.nextUrl.searchParams
 
-    const page = Number(searchParams.get("page")) || 1
-    const limit = Math.min(Number(searchParams.get("limit")) || 16, 64)
-    const category = searchParams.get("category")
-    const categoryId = searchParams.get("category_id")
-    const search = searchParams.get("search")
-    const minPrice = searchParams.get("minPrice")
-    const maxPrice = searchParams.get("maxPrice")
-    const color = searchParams.get("color")
-    const material = searchParams.get("material")
-    const brand = searchParams.get("brand")
-    const sort = searchParams.get("sort") || "newest"
-    const featured = searchParams.get("featured")
-    const bestseller = searchParams.get("bestseller")
-    const isNew = searchParams.get("new")
-    const onSale = searchParams.get("on_sale")
-    const inStock = searchParams.get("in_stock")
+    const page = Math.max(1, Math.floor(Number(sp.get("page")) || 1))
+    const limit = Math.min(Math.max(1, Math.floor(Number(sp.get("limit")) || 16)), 64)
+    const search = sanitizeSearch(sp.get("search"))
+    const category = sanitizeSlug(sp.get("category"))
+    const categoryId = sp.get("category_id")
+    const minPrice = Number(sp.get("minPrice"))
+    const maxPrice = Number(sp.get("maxPrice"))
+    const sort = sp.get("sort") || "newest"
 
-    let query = supabase
-      .from("products")
-      .select("*", { count: "exact" })
-      .eq("is_active", true)
+    let query = supabase.from("products").select("*", { count: "exact" }).eq("is_active", true)
 
     if (search) {
-      query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%,brand.ilike.%${search}%`)
+      query = query.or(`title.ilike.*${search}*,description.ilike.*${search}*,brand.ilike.*${search}*`)
     }
     if (category) query = query.eq("category", category)
-    if (categoryId) query = query.eq("category_id", categoryId)
-    if (minPrice) query = query.gte("price", Number(minPrice))
-    if (maxPrice) query = query.lte("price", Number(maxPrice))
-    if (color) query = query.eq("color", color)
-    if (material) query = query.eq("material", material)
-    if (brand) query = query.eq("brand", brand)
-    if (featured === "true") query = query.eq("is_featured", true)
-    if (bestseller === "true") query = query.eq("is_bestseller", true)
-    if (isNew === "true") query = query.eq("is_new", true)
-    if (onSale === "true") query = query.not("discount_price", "is", null)
-    if (inStock === "true") query = query.gt("stock", 0)
+    if (isUuid(categoryId)) query = query.eq("category_id", categoryId)
+    if (Number.isFinite(minPrice) && sp.get("minPrice")) query = query.gte("price", minPrice)
+    if (Number.isFinite(maxPrice) && sp.get("maxPrice")) query = query.lte("price", maxPrice)
+    for (const key of ["color", "material", "brand"] as const) {
+      const value = sp.get(key)
+      if (value) query = query.eq(key, value.slice(0, 80))
+    }
+    if (sp.get("featured") === "true") query = query.eq("is_featured", true)
+    if (sp.get("bestseller") === "true") query = query.eq("is_bestseller", true)
+    if (sp.get("new") === "true") query = query.eq("is_new", true)
+    if (sp.get("on_sale") === "true") query = query.not("discount_price", "is", null)
+    if (sp.get("in_stock") === "true") query = query.gt("stock", 0)
 
-    // Sorting
     switch (sort) {
       case "price_asc":
         query = query.order("price", { ascending: true })
@@ -62,13 +54,8 @@ export async function GET(request: NextRequest) {
         query = query.order("created_at", { ascending: false })
     }
 
-    // Pagination
     const from = (page - 1) * limit
-    const to = from + limit - 1
-    query = query.range(from, to)
-
-    const { data, error, count } = await query
-
+    const { data, error, count } = await query.range(from, from + limit - 1)
     if (error) throw error
 
     return NextResponse.json({
@@ -79,45 +66,27 @@ export async function GET(request: NextRequest) {
       limit,
     })
   } catch (error) {
-    console.error("Error fetching products:", error)
+    console.error("[products] list failed:", error)
     return NextResponse.json({ error: "Failed to fetch products" }, { status: 500 })
   }
 }
 
 export async function POST(request: Request) {
+  const auth = await requireAdminApi()
+  if (auth instanceof NextResponse) return auth
+
+  const parsed = await parseJson(request, productSchema)
+  if ("error" in parsed) return parsed.error
+
   try {
-    const supabase = await createClient()
+    const row = toProductRow(parsed.data)
+    row.slug = `${slugify(parsed.data.slug || parsed.data.title) || "produkt"}-${Date.now().toString(36)}`
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
-    const body = await request.json()
-
-    // Generate slug from title if not provided
-    if (!body.slug && body.title) {
-      body.slug = body.title
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-|-$/g, "")
-        + "-" + Date.now().toString(36)
-    }
-
-    // Map customFields to custom_fields
-    const payload = {
-      ...body,
-      custom_fields: body.customFields || body.custom_fields || [],
-    }
-    delete payload.customFields
-
-    const { data, error } = await supabase.from("products").insert([payload]).select().single()
-
+    const { data, error } = await auth.db.from("products").insert(row).select().single()
     if (error) throw error
-
-    return NextResponse.json(data)
+    return NextResponse.json(data, { status: 201 })
   } catch (error) {
-    console.error("Error creating product:", error)
-    return NextResponse.json({ error: "Failed to create product" }, { status: 500 })
+    console.error("[products] create failed:", error)
+    return NextResponse.json({ error: "Deshtoi krijimi i produktit" }, { status: 500 })
   }
 }

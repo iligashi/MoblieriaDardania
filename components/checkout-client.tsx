@@ -65,9 +65,6 @@ export function CheckoutClient() {
     try {
       const orderItems = items.map((item) => ({
         product_id: item.product_id,
-        product_title: item.product?.title || "",
-        product_image: item.product?.images?.[0] || null,
-        price: item.product?.discount_price ?? item.product?.price ?? 0,
         quantity: item.quantity,
       }))
 
@@ -97,12 +94,8 @@ export function CheckoutClient() {
             country: form.country,
             phone: form.phone,
           },
-          subtotal,
-          shipping_cost: shippingCost,
-          total,
           payment_method: form.payment_method,
           notes: form.notes || null,
-          send_via_whatsapp: true,
         }),
       })
 

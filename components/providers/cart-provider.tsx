@@ -39,7 +39,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const fetchCart = useCallback(async () => {
     try {
       const sessionId = getSessionId()
-      const res = await fetch(`/api/cart?sessionId=${sessionId}`)
+      const res = await fetch("/api/cart", { headers: { "x-cart-session": sessionId } })
       if (res.ok) {
         const data = await res.json()
         setItems(data)
@@ -66,8 +66,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
     const res = await fetch("/api/cart", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ product_id: product.id, quantity, session_id: sessionId }),
+      headers: { "Content-Type": "application/json", "x-cart-session": sessionId },
+      body: JSON.stringify({ product_id: product.id, quantity }),
     })
 
     if (res.ok) {
@@ -76,7 +76,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }
 
   const removeItem = async (itemId: string) => {
-    const res = await fetch(`/api/cart/${itemId}`, { method: "DELETE" })
+    const res = await fetch(`/api/cart/${itemId}`, {
+      method: "DELETE",
+      headers: { "x-cart-session": getSessionId() },
+    })
     if (res.ok) {
       setItems((prev) => prev.filter((i) => i.id !== itemId))
     }
@@ -90,7 +93,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
     const res = await fetch(`/api/cart/${itemId}`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "x-cart-session": getSessionId() },
       body: JSON.stringify({ quantity }),
     })
 
@@ -103,7 +106,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const clearCart = async () => {
     const sessionId = getSessionId()
-    await fetch(`/api/cart?sessionId=${sessionId}`, { method: "DELETE" })
+    await fetch("/api/cart", { method: "DELETE", headers: { "x-cart-session": sessionId } })
     setItems([])
   }
 

@@ -1,94 +1,43 @@
-import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
+import { requireAdminApi } from "@/lib/auth/admin"
+import { parseJson, settingSchema } from "@/lib/validation"
 
 export async function GET() {
+  const auth = await requireAdminApi()
+  if (auth instanceof NextResponse) return auth
+
   try {
-    const supabase = await createClient()
-
-    // Check authentication
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
-
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
-    // Verify user is an admin
-    const { data: adminData } = await supabase.from("admin_users").select("*").eq("id", user.id).single()
-
-    if (!adminData) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
-    // Fetch all settings
-    const { data, error } = await supabase.from("settings").select("*")
-
+    const { data, error } = await auth.db.from("settings").select("key, value")
     if (error) throw error
 
-    // Convert to key-value object
-    const settings = data.reduce((acc, setting) => {
-      acc[setting.key] = setting.value
-      return acc
-    }, {} as Record<string, any>)
-
+    const settings: Record<string, unknown> = {}
+    for (const row of data || []) settings[row.key] = row.value
     return NextResponse.json(settings)
   } catch (error) {
-    console.error("[v0] Error fetching settings:", error)
+    console.error("[settings] fetch failed:", error)
     return NextResponse.json({ error: "Failed to fetch settings" }, { status: 500 })
   }
 }
 
 export async function PUT(request: Request) {
+  const auth = await requireAdminApi()
+  if (auth instanceof NextResponse) return auth
+
+  const parsed = await parseJson(request, settingSchema)
+  if ("error" in parsed) return parsed.error
+
   try {
-    const supabase = await createClient()
-
-    // Check authentication
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
-
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
-    // Verify user is an admin
-    const { data: adminData } = await supabase.from("admin_users").select("*").eq("id", user.id).single()
-
-    if (!adminData) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
-    const body = await request.json()
-    const { key, value } = body
-
-    if (!key || !value) {
-      return NextResponse.json({ error: "Key and value are required" }, { status: 400 })
-    }
-
-    // Update or insert setting
-    const { data, error } = await supabase
+    const value = [...new Set(parsed.data.value.map((v) => v.toLowerCase()))]
+    const { data, error } = await auth.db
       .from("settings")
-      .upsert(
-        {
-          key,
-          value,
-          updated_at: new Date().toISOString(),
-        },
-        {
-          onConflict: "key",
-        }
-      )
+      .upsert({ key: parsed.data.key, value, updated_at: new Date().toISOString() }, { onConflict: "key" })
       .select()
       .single()
 
     if (error) throw error
-
     return NextResponse.json(data)
   } catch (error) {
-    console.error("[v0] Error updating settings:", error)
+    console.error("[settings] update failed:", error)
     return NextResponse.json({ error: "Failed to update settings" }, { status: 500 })
   }
 }
