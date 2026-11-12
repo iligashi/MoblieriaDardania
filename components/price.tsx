@@ -23,7 +23,7 @@ export function Price({
         className={cn(
           "font-semibold tracking-tight",
           size === "lg" ? "text-3xl" : size === "sm" ? "text-sm" : "text-[15px]",
-          onSale && "text-primary",
+          onSale && "text-sale",
         )}
       >
         {formatPrice(final)}

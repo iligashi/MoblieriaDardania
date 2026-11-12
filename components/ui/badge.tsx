@@ -14,7 +14,7 @@ const badgeVariants = cva(
         destructive: "border-transparent bg-destructive/10 text-destructive",
         outline: "border-border text-foreground",
         success: "border-transparent bg-success-soft text-success",
-        warning: "border-transparent bg-warning-soft text-[oklch(0.5_0.12_65)]",
+        warning: "border-transparent bg-warning-soft text-warning-strong",
         info: "border-transparent bg-info-soft text-info",
         ink: "border-transparent bg-ink text-ink-foreground",
         highlight: "border-transparent bg-highlight text-highlight-foreground",

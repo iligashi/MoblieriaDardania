@@ -46,7 +46,12 @@ export function AddToCartButton({ product }: { product: Product }) {
   return (
     <div className="flex gap-2.5">
       {!outOfStock && <QuantityStepper size="lg" value={quantity} max={max} onChange={setQuantity} />}
-      <Button size="lg" className="h-12 flex-1" onClick={handleAdd} disabled={outOfStock || state === "adding"}>
+      <Button
+        size="lg"
+        className="h-12 min-w-0 flex-1 px-4 text-[15px] has-[>svg]:px-4 sm:px-6"
+        onClick={handleAdd}
+        disabled={outOfStock || state === "adding"}
+      >
         {state === "adding" ? (
           <Loader2 className="animate-spin" />
         ) : state === "added" ? (
@@ -54,7 +59,17 @@ export function AddToCartButton({ product }: { product: Product }) {
         ) : (
           <ShoppingBag />
         )}
-        {outOfStock ? "Jo në stok" : state === "added" ? "U shtua" : "Shto në shportë"}
+        <span className="truncate">
+          {outOfStock ? (
+            "Jo në stok"
+          ) : state === "added" ? (
+            "U shtua"
+          ) : (
+            <>
+              Shto<span className="max-[419px]:hidden"> në shportë</span>
+            </>
+          )}
+        </span>
       </Button>
       <Button
         size="icon-lg"
@@ -64,7 +79,7 @@ export function AddToCartButton({ product }: { product: Product }) {
         aria-pressed={wishlisted}
         aria-label={wishlisted ? "Hiq nga lista e dëshirave" : "Shto në listën e dëshirave"}
       >
-        <Heart className={cn(wishlisted && "fill-primary text-primary")} />
+        <Heart className={cn(wishlisted && "fill-sale text-sale")} />
       </Button>
     </div>
   )

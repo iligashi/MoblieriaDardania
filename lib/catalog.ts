@@ -50,6 +50,15 @@ export function productInCategory(p: ProductRef, keys: { ids: Set<string>; slugs
   return (!!p.category_id && keys.ids.has(p.category_id)) || (!!p.category && keys.slugs.has(p.category))
 }
 
+/** Display name of a product's category (by id, falling back to the legacy slug). */
+export function categoryNameFor(p: ProductRef, categories: Pick<Category, "id" | "slug" | "name">[]): string | undefined {
+  return (
+    (p.category_id && categories.find((c) => c.id === p.category_id)?.name) ||
+    (p.category && categories.find((c) => c.slug === p.category)?.name) ||
+    undefined
+  )
+}
+
 export type CategorySummary = Omit<Category, "children"> & {
   productCount: number
   covers: string[]

@@ -1,6 +1,6 @@
 import type React from "react"
 import type { Metadata, Viewport } from "next"
-import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google"
+import { DM_Serif_Display, Geist_Mono, Manrope } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { Toaster } from "sonner"
 import { CartProvider } from "@/components/providers/cart-provider"
@@ -10,13 +10,13 @@ import { LayoutShell } from "@/components/layout-shell"
 import { SITE_URL } from "@/lib/site"
 import "./globals.css"
 
-const geist = Geist({ subsets: ["latin", "latin-ext"], variable: "--font-geist", display: "swap" })
+const manrope = Manrope({ subsets: ["latin", "latin-ext"], variable: "--font-manrope", display: "swap" })
 const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono", display: "swap" })
-const instrumentSerif = Instrument_Serif({
+const dmSerif = DM_Serif_Display({
   subsets: ["latin", "latin-ext"],
   weight: "400",
   style: ["normal", "italic"],
-  variable: "--font-instrument-serif",
+  variable: "--font-dm-serif",
   display: "swap",
 })
 
@@ -49,14 +49,14 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: "#faf8f5",
+  themeColor: "#f8f7f3",
   width: "device-width",
   initialScale: 1,
 }
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="sq" className={`${geist.variable} ${geistMono.variable} ${instrumentSerif.variable}`}>
+    <html lang="sq" className={`${manrope.variable} ${geistMono.variable} ${dmSerif.variable}`}>
       <body className="min-h-dvh font-sans">
         <AuthProvider>
           <CartProvider>
@@ -66,7 +66,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
                 position="bottom-right"
                 toastOptions={{
                   classNames: {
-                    toast: "!rounded-2xl !border-border !bg-card !text-foreground !shadow-[var(--shadow-lift)]",
+                    toast: "!rounded-xl !border-border !bg-card !text-foreground !shadow-[var(--shadow-lift)]",
                     description: "!text-muted-foreground",
                   },
                 }}

@@ -4,77 +4,86 @@
 @custom-variant dark (&:is(.dark *));
 
 /* ==========================================================================
-   Flux Dekor design tokens
-   Warm, editorial palette: paper background, charcoal ink, brand crimson
-   for actions and a soft amber highlight. Every colour in the UI comes from
-   these variables, so the brand can be re-themed in one place.
+   Flux Dekor design system
+   Forest green taken from the logo, warm beige and off-white surfaces, a
+   brass-gold accent and a terracotta reserved for discounts. Every colour in
+   the UI comes from these variables, so the brand can be re-themed here.
    ========================================================================== */
 :root {
-  --background: oklch(0.982 0.005 80);
-  --foreground: oklch(0.205 0.008 60);
+  --background: #f8f7f3;
+  --foreground: #172a25;
 
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.205 0.008 60);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.205 0.008 60);
+  --card: #ffffff;
+  --card-foreground: #172a25;
+  --popover: #ffffff;
+  --popover-foreground: #172a25;
 
-  --primary: oklch(0.53 0.19 27);
-  --primary-foreground: oklch(0.99 0.005 80);
+  --primary: #172a25;
+  --primary-foreground: #f8f7f3;
 
-  --secondary: oklch(0.955 0.007 80);
-  --secondary-foreground: oklch(0.24 0.008 60);
+  --secondary: #efebe3;
+  --secondary-foreground: #172a25;
 
-  --muted: oklch(0.955 0.007 80);
-  --muted-foreground: oklch(0.52 0.012 65);
+  --muted: #efebe3;
+  --muted-foreground: #5c6863;
 
-  --accent: oklch(0.94 0.012 80);
-  --accent-foreground: oklch(0.205 0.008 60);
+  --accent: #e8e2d6;
+  --accent-foreground: #172a25;
 
-  --highlight: oklch(0.84 0.14 82);
-  --highlight-foreground: oklch(0.25 0.03 70);
+  /* Brass gold: backgrounds use --highlight, gold text uses --gold-ink. */
+  --highlight: #b58a56;
+  --highlight-foreground: #172a25;
+  --gold-ink: #8a6436;
 
-  --ink: oklch(0.2 0.008 60);
-  --ink-foreground: oklch(0.985 0.004 80);
+  /* Beige surface used behind product photography. */
+  --sand: #e8e2d6;
 
-  --success: oklch(0.56 0.13 155);
-  --success-soft: oklch(0.95 0.04 155);
-  --warning: oklch(0.7 0.15 70);
-  --warning-soft: oklch(0.96 0.05 85);
-  --info: oklch(0.56 0.13 250);
-  --info-soft: oklch(0.95 0.03 250);
+  --ink: #10201c;
+  --ink-foreground: #f8f7f3;
 
-  --destructive: oklch(0.55 0.21 27);
-  --destructive-foreground: oklch(0.99 0 0);
+  /* Discounts only. */
+  --sale: #b4472e;
+  --sale-foreground: #ffffff;
 
-  --border: oklch(0.912 0.008 75);
-  --input: oklch(0.89 0.009 75);
-  --ring: oklch(0.53 0.19 27);
+  --success: #2f7a55;
+  --success-soft: #e3f0e8;
+  --warning: #c08a2e;
+  --warning-soft: #f7eedc;
+  --info: #3c6e8f;
+  --info-soft: #e4eef4;
 
-  --chart-1: oklch(0.53 0.19 27);
-  --chart-2: oklch(0.3 0.01 60);
-  --chart-3: oklch(0.78 0.12 75);
-  --chart-4: oklch(0.6 0.1 160);
-  --chart-5: oklch(0.6 0.1 250);
+  --destructive: #b4361f;
+  --destructive-foreground: #ffffff;
 
-  --radius: 0.875rem;
+  --border: #e3ded3;
+  --input: #d9d3c6;
+  --ring: #b58a56;
 
-  --sidebar: oklch(0.2 0.008 60);
-  --sidebar-foreground: oklch(0.86 0.006 75);
-  --sidebar-primary: oklch(0.985 0.004 80);
-  --sidebar-primary-foreground: oklch(0.2 0.008 60);
-  --sidebar-accent: oklch(0.27 0.008 60);
-  --sidebar-accent-foreground: oklch(0.985 0.004 80);
-  --sidebar-border: oklch(0.3 0.008 60);
-  --sidebar-ring: oklch(0.53 0.19 27);
+  --chart-1: #172a25;
+  --chart-2: #b58a56;
+  --chart-3: #7e9c8a;
+  --chart-4: #b4472e;
+  --chart-5: #3c6e8f;
 
-  --shadow-soft: 0 1px 2px oklch(0.2 0.01 60 / 0.04), 0 4px 16px -4px oklch(0.2 0.01 60 / 0.08);
-  --shadow-lift: 0 2px 4px oklch(0.2 0.01 60 / 0.04), 0 16px 40px -12px oklch(0.2 0.01 60 / 0.18);
+  --radius: 0.75rem;
+
+  --sidebar: #10201c;
+  --sidebar-foreground: #c9d1cd;
+  --sidebar-primary: #f8f7f3;
+  --sidebar-primary-foreground: #10201c;
+  --sidebar-accent: #1c302a;
+  --sidebar-accent-foreground: #f8f7f3;
+  --sidebar-border: #24382f;
+  --sidebar-ring: #b58a56;
+
+  --shadow-soft: 0 1px 2px rgb(23 42 37 / 0.04), 0 4px 16px -4px rgb(23 42 37 / 0.08);
+  --shadow-lift: 0 2px 4px rgb(23 42 37 / 0.04), 0 18px 44px -14px rgb(23 42 37 / 0.22);
 }
 
 @theme inline {
-  --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
-  --font-display: var(--font-instrument-serif), ui-serif, Georgia, serif;
+  --font-display: var(--font-dm-serif), ui-serif, Georgia, serif;
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -92,13 +101,17 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-highlight: var(--highlight);
   --color-highlight-foreground: var(--highlight-foreground);
+  --color-gold-ink: var(--gold-ink);
+  --color-sand: var(--sand);
+  --color-sale: var(--sale);
+  --color-sale-foreground: var(--sale-foreground);
   --color-ink: var(--ink);
   --color-ink-foreground: var(--ink-foreground);
   --color-success: var(--success);
   --color-success-soft: var(--success-soft);
   --color-warning: var(--warning);
   --color-warning-soft: var(--warning-soft);
-  --color-warning-strong: color-mix(in oklch, var(--warning), black 32%);
+  --color-warning-strong: color-mix(in oklab, var(--warning), black 32%);
   --color-info: var(--info);
   --color-info-soft: var(--info-soft);
   --color-destructive: var(--destructive);
@@ -132,6 +145,47 @@
 
   --animate-fade-up: fade-up 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
   --animate-marquee: marquee 40s linear infinite;
+  --animate-bump: bump 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+  --animate-ticker: ticker 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-slide-up: slide-up 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+
+  @keyframes shimmer {
+    to {
+      transform: translateX(100%);
+    }
+  }
+
+  @keyframes bump {
+    0% {
+      transform: scale(1);
+    }
+    40% {
+      transform: scale(1.35);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  @keyframes ticker {
+    from {
+      opacity: 0;
+      transform: translateY(60%);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes slide-up {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
 
   @keyframes fade-up {
     from {
@@ -167,7 +221,7 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-feature-settings: "ss01", "cv11";
+    font-feature-settings: "kern", "liga";
   }
 
   button,
@@ -183,7 +237,7 @@
   }
 
   ::selection {
-    background: oklch(0.53 0.19 27 / 0.18);
+    background: rgb(181 138 86 / 0.28);
   }
 
   /* Number inputs: hide spinners, they are noisy in forms. */
@@ -228,6 +282,30 @@
   .surface {
     @apply rounded-2xl border border-border/70 bg-card;
     box-shadow: var(--shadow-soft);
+  }
+
+  .reveal-ready [data-reveal] {
+    opacity: 0;
+    transform: translateY(18px);
+    transition:
+      opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+      transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+    transition-delay: var(--reveal-delay, 0ms);
+  }
+  .reveal-ready [data-reveal].is-visible {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* Product photography: cut-outs sit on sand, photos fill the frame. */
+  .product-shot {
+    @apply absolute inset-0 size-full;
+  }
+  .product-shot[data-fit="contain"] {
+    @apply object-contain p-[9%] mix-blend-multiply;
+  }
+  .product-shot[data-fit="cover"] {
+    @apply object-cover;
   }
 
   .scrollbar-none {

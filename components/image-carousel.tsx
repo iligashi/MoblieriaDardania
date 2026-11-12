@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import * as DialogPrimitive from "@radix-ui/react-dialog"
-import { ChevronLeft, ChevronRight, Expand, X } from "lucide-react"
+import { ChevronLeft, ChevronRight, Expand, X, ZoomIn } from "lucide-react"
+import { imageFit } from "@/lib/media"
 import { cn } from "@/lib/utils"
 
 export function ImageCarousel({ images, title }: { images: string[]; title: string }) {
@@ -10,7 +11,15 @@ export function ImageCarousel({ images, title }: { images: string[]; title: stri
   const [index, setIndex] = useState(0)
   const [zoomOpen, setZoomOpen] = useState(false)
   const touchX = useRef<number | null>(null)
+  const [lens, setLens] = useState<{ x: number; y: number } | null>(null)
   const many = list.length > 1
+
+  // Hover zoom for mouse users: the image scales towards the pointer.
+  const onMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) return
+    const rect = e.currentTarget.getBoundingClientRect()
+    setLens({ x: ((e.clientX - rect.left) / rect.width) * 100, y: ((e.clientY - rect.top) / rect.height) * 100 })
+  }
 
   const go = useCallback((dir: 1 | -1) => setIndex((i) => (i + dir + list.length) % list.length), [list.length])
 
@@ -35,7 +44,7 @@ export function ImageCarousel({ images, title }: { images: string[]; title: stri
   }
 
   return (
-    <div className="flex flex-col-reverse gap-3 sm:flex-row sm:gap-4">
+    <div className="flex min-w-0 flex-col-reverse gap-3 self-start sm:flex-row sm:items-start sm:gap-4 lg:sticky lg:top-36">
       {many && (
         <div className="flex gap-2.5 overflow-x-auto scrollbar-none sm:max-h-[640px] sm:w-20 sm:flex-col sm:overflow-y-auto">
           {list.map((src, i) => (
@@ -46,19 +55,24 @@ export function ImageCarousel({ images, title }: { images: string[]; title: stri
               aria-label={`Fotoja ${i + 1}`}
               aria-current={i === index}
               className={cn(
-                "relative aspect-square w-16 shrink-0 overflow-hidden rounded-xl bg-muted/70 ring-1 transition-all sm:w-20",
+                "relative aspect-square w-16 shrink-0 overflow-hidden rounded-lg bg-sand/60 ring-1 transition-all sm:w-20",
                 i === index ? "ring-2 ring-foreground" : "ring-border opacity-70 hover:opacity-100",
               )}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={src} alt="" className="size-full object-contain p-1.5 mix-blend-multiply" loading="lazy" />
+              <img src={src} alt="" data-fit={imageFit(src)} className="product-shot !p-1.5" loading="lazy" />
             </button>
           ))}
         </div>
       )}
 
       <div
-        className="group relative aspect-square flex-1 overflow-hidden rounded-[1.75rem] bg-muted/70 ring-1 ring-border/60 ring-inset"
+        className={cn(
+          "group relative aspect-square flex-1 overflow-hidden rounded-2xl bg-sand/55 ring-1 ring-border/50 ring-inset",
+          lens && "cursor-zoom-in",
+        )}
+        onMouseMove={onMove}
+        onMouseLeave={() => setLens(null)}
         {...swipe}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -66,8 +80,13 @@ export function ImageCarousel({ images, title }: { images: string[]; title: stri
           key={list[index]}
           src={list[index]}
           alt={`${title} — fotoja ${index + 1}`}
-          className="absolute inset-0 size-full animate-in object-contain p-8 mix-blend-multiply duration-300 fade-in-0 sm:p-12"
+          data-fit={imageFit(list[index])}
+          style={lens ? { transform: "scale(2)", transformOrigin: `${lens.x}% ${lens.y}%` } : undefined}
+          className="product-shot animate-in transition-transform duration-200 ease-out fade-in-0"
         />
+        <span className="pointer-events-none absolute bottom-4 left-4 hidden items-center gap-1.5 rounded-full bg-card/85 px-3 py-1.5 text-[11px] font-medium backdrop-blur transition-opacity group-hover:opacity-0 lg:inline-flex">
+          <ZoomIn className="size-3.5" /> Kaloni mbi foto për zmadhim
+        </span>
         <button
           type="button"
           onClick={() => setZoomOpen(true)}

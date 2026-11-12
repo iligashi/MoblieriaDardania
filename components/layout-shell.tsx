@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
+import { RevealController } from "@/components/reveal"
 
 export function LayoutShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -21,6 +22,9 @@ export function LayoutShell({ children }: { children: React.ReactNode }) {
         {children}
       </main>
       <SiteFooter />
+      {/* Room for the fixed bottom bar on phones (tab bar or sticky add-to-cart). */}
+      <div aria-hidden className="h-[calc(4rem+env(safe-area-inset-bottom))] lg:hidden" />
+      <RevealController />
     </div>
   )
 }
