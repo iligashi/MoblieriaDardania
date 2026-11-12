@@ -53,7 +53,7 @@ export function MobileNav({
               <Link
                 href="/shop?on_sale=true"
                 onClick={close}
-                className="flex items-center justify-between border-b py-4 text-[15px] font-semibold text-primary"
+                className="flex items-center justify-between border-b py-4 text-[15px] font-bold text-sale"
               >
                 Zbritje
                 <ChevronRight className="size-4" />

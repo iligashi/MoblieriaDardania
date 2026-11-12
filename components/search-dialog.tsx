@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import * as DialogPrimitive from "@radix-ui/react-dialog"
 import { ArrowUpRight, Loader2, Search, X } from "lucide-react"
 import { formatPrice, unitPrice } from "@/lib/shop-config"
+import { imageFit } from "@/lib/media"
 import type { Category, Product } from "@/lib/types"
 
 interface SearchDialogProps {
@@ -78,11 +79,11 @@ export function SearchDialog({ open, onOpenChange, categories }: SearchDialogPro
             e.preventDefault()
             inputRef.current?.focus()
           }}
-          className="fixed top-0 left-1/2 z-50 w-full max-w-2xl -translate-x-1/2 p-3 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-top-4 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-top-4 sm:top-[12vh]"
+          className="fixed inset-0 z-50 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-top-4 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-top-4 sm:inset-auto sm:top-[12vh] sm:left-1/2 sm:w-full sm:max-w-2xl sm:-translate-x-1/2 sm:p-3"
         >
           <DialogPrimitive.Title className="sr-only">Kërko produkte</DialogPrimitive.Title>
-          <div className="overflow-hidden rounded-3xl border bg-popover shadow-[var(--shadow-lift)]">
-            <form onSubmit={submit} className="flex items-center gap-3 border-b px-5">
+          <div className="flex h-full flex-col overflow-hidden bg-popover sm:h-auto sm:rounded-2xl sm:border sm:shadow-[var(--shadow-lift)]">
+            <form onSubmit={submit} className="flex shrink-0 items-center gap-3 border-b px-4 sm:px-5">
               {loading ? (
                 <Loader2 className="size-5 shrink-0 animate-spin text-muted-foreground" />
               ) : (
@@ -108,7 +109,7 @@ export function SearchDialog({ open, onOpenChange, categories }: SearchDialogPro
               </button>
             </form>
 
-            <div className="max-h-[60vh] overflow-y-auto p-3">
+            <div className="flex-1 overflow-y-auto p-3 sm:max-h-[60vh] sm:flex-none">
               {query.trim().length < 2 ? (
                 <div className="p-3">
                   <p className="eyebrow mb-3">Kategori të njohura</p>
@@ -126,7 +127,7 @@ export function SearchDialog({ open, onOpenChange, categories }: SearchDialogPro
                     <Link
                       href="/shop?on_sale=true"
                       onClick={close}
-                      className="rounded-full bg-primary/10 px-3.5 py-1.5 text-sm font-medium text-primary hover:bg-primary/15"
+                      className="rounded-full bg-sale/10 px-3.5 py-1.5 text-sm font-semibold text-sale hover:bg-sale/15"
                     >
                       Zbritje
                     </Link>
@@ -144,11 +145,17 @@ export function SearchDialog({ open, onOpenChange, categories }: SearchDialogPro
                       <Link
                         href={`/products/${p.slug || p.id}`}
                         onClick={close}
-                        className="flex items-center gap-4 rounded-2xl p-2 transition-colors hover:bg-accent focus-visible:bg-accent focus-visible:outline-none"
+                        className="flex items-center gap-4 rounded-xl p-2 transition-colors hover:bg-accent focus-visible:bg-accent focus-visible:outline-none"
                       >
-                        <span className="size-14 shrink-0 overflow-hidden rounded-xl bg-muted">
+                        <span className="relative size-14 shrink-0 overflow-hidden rounded-lg bg-sand/60">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={p.images?.[0] || "/placeholder.svg"} alt="" className="size-full object-cover" loading="lazy" />
+                          <img
+                            src={p.images?.[0] || "/placeholder.svg"}
+                            alt=""
+                            data-fit={imageFit(p.images?.[0])}
+                            className="product-shot !p-1"
+                            loading="lazy"
+                          />
                         </span>
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-sm font-medium">{p.title}</span>
@@ -163,7 +170,7 @@ export function SearchDialog({ open, onOpenChange, categories }: SearchDialogPro
                       <button
                         type="button"
                         onClick={submit}
-                        className="mt-1 flex w-full items-center justify-center gap-1.5 rounded-2xl p-3 text-sm font-medium text-primary hover:bg-primary/5"
+                        className="mt-1 flex w-full items-center justify-center gap-1.5 rounded-xl p-3 text-sm font-semibold hover:bg-accent"
                       >
                         Shiko të gjitha {total} rezultatet <ArrowUpRight className="size-4" />
                       </button>
