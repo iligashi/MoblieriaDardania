@@ -70,7 +70,7 @@ export function CategoryVisual({
 
 function Tile({ src, className }: { src: string; className?: string }) {
   return (
-    <div className={cn("relative min-h-0 overflow-hidden rounded-2xl bg-white shadow-[0_1px_2px_rgb(0_0_0/0.06)]", className)}>
+    <div className={cn("relative min-h-0 overflow-hidden rounded-xl bg-white shadow-[0_1px_2px_rgb(0_0_0/0.06)]", className)}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={src}
@@ -107,7 +107,7 @@ export function CategoryCard({
       <article
         style={catStyle(category.color)}
         className={cn(
-          "group/cat relative isolate flex h-full flex-col overflow-hidden rounded-[1.75rem]",
+          "group/cat relative isolate flex h-full flex-col overflow-hidden rounded-2xl",
           "bg-[color-mix(in_oklab,var(--cat)_10%,var(--card))] ring-1 ring-[color-mix(in_oklab,var(--cat)_20%,transparent)]",
           "transition-shadow duration-300 hover:shadow-[var(--shadow-lift)]",
           wide && "@xl:flex-row-reverse",

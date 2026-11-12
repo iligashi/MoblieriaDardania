@@ -25,6 +25,12 @@ export async function GET(request: NextRequest) {
     }
     if (category) query = query.eq("category", category)
     if (isUuid(categoryId)) query = query.eq("category_id", categoryId)
+    // Explicit id list (recently viewed, quick lookups). Invalid ids are dropped.
+    const ids = (sp.get("ids") ?? "").split(",").filter(isUuid).slice(0, 24)
+    if (sp.has("ids")) {
+      if (ids.length === 0) return NextResponse.json({ data: [], total: 0, page: 1, totalPages: 0, limit })
+      query = query.in("id", ids)
+    }
     if (Number.isFinite(minPrice) && sp.get("minPrice")) query = query.gte("price", minPrice)
     if (Number.isFinite(maxPrice) && sp.get("maxPrice")) query = query.lte("price", maxPrice)
     for (const key of ["color", "material", "brand"] as const) {

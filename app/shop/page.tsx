@@ -8,7 +8,7 @@ import { Pagination } from "@/components/pagination"
 import { EmptyState } from "@/components/empty-state"
 import { CategoryRail } from "@/components/category-rail"
 import { CategoryVisual, catStyle, productCountLabel } from "@/components/category-card"
-import { categoryFilter, getCategoryOverview } from "@/lib/catalog"
+import { categoryFilter, categoryNameFor, getCategoryOverview } from "@/lib/catalog"
 import { cn } from "@/lib/utils"
 import { sanitizeSearch } from "@/lib/validation"
 import type { Product } from "@/lib/types"
@@ -187,7 +187,7 @@ export default async function ShopPage({ searchParams }: { searchParams: Promise
             <>
               <ProductGrid className="mt-8 lg:grid-cols-3 xl:grid-cols-4">
                 {products.map((p, i) => (
-                  <ProductCard key={p.id} product={p} priority={i < 4} />
+                  <ProductCard key={p.id} product={p} category={categoryNameFor(p, categories)} priority={i < 4} />
                 ))}
               </ProductGrid>
               <div className="mt-14 flex flex-col items-center gap-3">
