@@ -6,7 +6,7 @@
 
 A storefront and an admin back office in one Next.js app, backed by Supabase.
 
-[![CI](https://github.com/iligashi/MoblieriaDardania/actions/workflows/ci.yml/badge.svg)](https://github.com/iligashi/MoblieriaDardania/actions/workflows/ci.yml)
+[![CI](https://github.com/iligashi/flux-dekor/actions/workflows/ci.yml/badge.svg)](https://github.com/iligashi/flux-dekor/actions/workflows/ci.yml)
 ![Next.js](https://img.shields.io/badge/Next.js-16-000?logo=nextdotjs)
 ![React](https://img.shields.io/badge/React-19-149eca?logo=react&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)
@@ -112,8 +112,8 @@ See **[SECURITY.md](SECURITY.md)** for the full list of controls, the dashboard 
 ### 1. Install
 
 ```bash
-git clone https://github.com/iligashi/MoblieriaDardania.git
-cd MoblieriaDardania
+git clone https://github.com/iligashi/flux-dekor.git
+cd flux-dekor
 pnpm install
 ```
 
